@@ -21,9 +21,9 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.m2/repository
-        key: clojure-${{ hashFiles('**/deps.edn') }}
+        key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
         restore-keys: |
-          clojure-
+          ${{ runner.os }}-clojure-
 
     - name: Run tests
       run: |
