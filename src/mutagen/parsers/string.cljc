@@ -102,7 +102,7 @@
   ([P]
    (letfn [(ok [st]
              {:result (:out st)
-              :state st})
+              :state (dissoc st :out)})
            (fail [_st failure]
              failure)]
      (fn [string & args]
