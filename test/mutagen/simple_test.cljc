@@ -5,9 +5,9 @@
 
 (deftest basic
   (let [P (string-parser/parser
-           {"A" [:plus {:ok-wrapper (fn [xs] [(str (count xs) "A")])}
+           {"A" [:plus {:ok-wrapper (fn [xs _] [(str (count xs) "A")])}
                  [:char \a]]
-            "B" [:plus {:ok-wrapper (fn [xs] [(str (count xs) "B")])}
+            "B" [:plus {:ok-wrapper (fn [xs _] [(str (count xs) "B")])}
                  [:char \b]]}
            [:star [:cat ["A"] ["B"]]])]
    (is (= []

@@ -49,7 +49,7 @@
       (comb/discard (p)))))
 
 (defmethod parser* :wrap [m [_ {:keys [ok-wrapper fail-wrapper]
-                                :or {ok-wrapper identity
+                                :or {ok-wrapper (fn [xs _fail-fn] xs)
                                      fail-wrapper (fn [_st failure] failure)}} & _ :as p]]
   (let [p (parser* m (update p 1 #(dissoc % :ok-wrapper :fail-wrapper)))]
     (fn [& args]

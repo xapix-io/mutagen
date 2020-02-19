@@ -11,29 +11,29 @@
                                    (last xs)])
    :node :const})
 
-(defn wrap-null [xs]
+(defn wrap-null [xs _]
   (wrap-const
    (const-token xs)
    nil))
 
-(defn wrap-boolean [xs]
+(defn wrap-boolean [xs _]
   (wrap-const
    (const-token xs)
    (case (-> xs first :ch)
      \t true
      \f false)))
 
-(defn wrap-number [xs]
+(defn wrap-number [xs _]
   (wrap-const
    (const-token xs)
    (edn/read-string (apply str (map :ch xs)))))
 
-(defn wrap-string [xs]
+(defn wrap-string [xs _]
   (wrap-const
    (const-token xs)
    (apply str (map :ch (rest (butlast xs))))))
 
-(defn wrap-escape-char [xs]
+(defn wrap-escape-char [xs _]
   [(update (second xs) :ch {\" \"
                             \\ \\
                             \b \backspace
@@ -42,47 +42,26 @@
                             \r \return
                             \t \tab})])
 
-(defn wrap-unicode-char [xs]
+(defn wrap-unicode-char [xs _]
   [(assoc (last xs) :ch
           (char (#?(:clj Integer/parseInt :cljs js/parseInt)
                  (apply str (map :ch (drop 2 xs))) 16)))])
 
-(defn wrap-array [xs]
+(defn wrap-array [xs _]
   [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
     :node :array
     :content (vec (rest (butlast xs)))}])
 
-(defn wrap-member [xs]
+(defn wrap-member [xs _]
   [{:range [(-> xs first :range first)
             (-> xs last :range last)]
     :content xs
     :node :member}])
 
-(defn wrap-object [xs]
+(defn wrap-object [xs _]
   [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
     :node :object
     :content (vec (rest (butlast xs)))}])
-
-(defmulti to-json :node)
-
-(defmethod to-json :const [{:keys [content]}]
-  content)
-
-(defmethod to-json :array [{:keys [content]}]
-  (mapv to-json content))
-
-(defmethod to-json :member [{:keys [content]}]
-  (mapv to-json content))
-
-(defmethod to-json :object [{:keys [content]}]
-  (->> content
-       (map to-json)
-       (into {})))
-
-(defn wrap-json [[json]]
-  [{:node :json
-    :content (to-json json)
-    :range (:range json)}])
 
 (def json-grammar
   {"json"

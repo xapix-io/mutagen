@@ -103,8 +103,10 @@
   ([p ok-wrapper fail-wrapper]
    (fn [{:keys [out] :as st} ok fail]
      (letfn [(ok' [st']
-               (ok (update st' :out (fn [out']
-                                      (into out (ok-wrapper out'))))))
+               (let [out' (ok-wrapper (:out st') (partial fail st'))]
+                 (if (fn? out')
+                   out'
+                   (ok (assoc st' :out (into out out'))))))
              (fail' [st' failure]
                (fail st' (fail-wrapper st' failure)))]
        (fn []

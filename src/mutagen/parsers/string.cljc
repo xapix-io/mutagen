@@ -44,6 +44,9 @@
                            :cljs js/Error) _
                    (failure/unexpected-eof st)))]
         (cond
+          #?@(:cljs [(not= (count w) (count w'))
+                     (fail st (failure/unexpected-eof st))])
+
           (failure/fail? w')
           (fail st w')
 
@@ -70,9 +73,11 @@
          (every? char? ch))
     ch))
 
+;; string specific eof check
 (defmethod state/eof? :string [{:keys [pos in]}]
   (>= pos (count in)))
 
+;; ==== Inject string specific data based combinators ====
 (defmethod grammar/parser* :some-char [_ [_ _ & chs]]
   (fn []
     (some-char (set (mapcat char* chs)))))
@@ -89,7 +94,11 @@
   (fn []
     (word w)))
 
-(defn state [st]
+;; =======================================================
+
+(defn state
+  "Convert the string into internal state representation"
+  [st]
   {:type :string
    :in st
    :pos 0
