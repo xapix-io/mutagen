@@ -1,0 +1,8 @@
+#kaocha/v1
+{:tests          [#_{:id           :unit-cljs
+                   :type         :kaocha.type/cljs
+                   :test-paths   ["test"]
+                   :source-paths ["src"]}
+                  {:id   :unit-clj
+                   :type :kaocha.type/clojure.test}]
+ :cloverage/opts {:codecov? true}}

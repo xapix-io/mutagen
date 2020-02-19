@@ -1,0 +1,14 @@
+{:paths ["src"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.10.1"}}
+
+ :aliases
+ {:+test {:extra-paths ["test"]
+          :extra-deps {lambdaisland/kaocha {:mvn/version "0.0-590"}
+                       lambdaisland/kaocha-cloverage {:mvn/version "0.0-41"}
+                       lambdaisland/kaocha-cljs {:mvn/version "0.0-68"}}}
+
+  :+dev {:extra-paths ["dev"]
+         :extra-deps {org.clojure/tools.reader {:mvn/version "1.3.2"}}}
+
+  :+cljs {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.597"}}}}}
