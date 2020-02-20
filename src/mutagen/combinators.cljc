@@ -34,8 +34,8 @@
   (let [alt-parser (alt* parsers)]
     (fn [st ok fail]
       (fn []
-        (alt-parser st ok (fn [st failures]
-                            (fail st failures))
+        (alt-parser st ok (fn [_st failures]
+                            (fail st (failure/alt st failures)))
                     [])))))
 
 (defn star [parser]

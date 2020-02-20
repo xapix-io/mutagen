@@ -13,5 +13,15 @@
   (ex-info (str "Unexpected token `" token "`.") {:state st
                                                   :type :parse-fail}))
 
+(defn datify [failure]
+  {:msg (ex-message failure)
+   :data (ex-data failure)})
+
+(defn alt [st failures]
+  (let [failures (map datify failures)]
+    (ex-info "None of the presented parsers could parse the input data" {:state st
+                                                                         :type :parse-fail
+                                                                         :failures failures})))
+
 (defn fail? [obj]
   (and (= (type obj) ExceptionInfo) (= :parse-fail (:type (ex-data obj)))))
