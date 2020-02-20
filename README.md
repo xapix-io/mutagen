@@ -2,6 +2,24 @@
 
 > Yet another LL(k) parser generator.
 
+---
+
+> Please note that this is a beta version of the `mutagen` library which is
+> still undergoing final testing before its official release. The
+> library, its software and all content found on it are provided on an
+> “as is” and “as available” basis. `mutagen` does not give any warranties,
+> whether express or implied, as to the suitability or usability of the
+> library, its software or any of its content.
+>
+> `mutagen` will not be liable for any loss, whether such loss is direct,
+> indirect, special or consequential, suffered by any party as a result
+> of their use of the `mutagen` library, its software or content.
+>
+> Should you encounter any bugs, glitches, lack of functionality or
+> other problems with the library, please let us know immediately so we
+> can rectify these accordingly. Your help in this regard is greatly
+> appreciated.
+
 ## TLDR;
 
 ```clojure
