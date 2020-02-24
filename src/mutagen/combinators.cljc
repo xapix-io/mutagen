@@ -1,126 +1,113 @@
 (ns mutagen.combinators
-  (:refer-clojure :exclude [cat])
-  (:require [mutagen.failure :as failure]
-            [mutagen.state :as state]))
+  (:refer-clojure :exclude [cat]))
 
-(defn cat [& parsers]
-  (if (seq (rest parsers))
-    (let [parser (first parsers)
-          parsers (apply cat (rest parsers))]
-      (fn [st ok fail]
-        (letfn [(ok' [st]
-                  (fn []
-                    (parsers st ok fail)))]
-          (fn []
-            (parser st ok' fail)))))
-    (let [parser (first parsers)]
+(defn cat [& PS]
+  (if (= 2 (count PS))
+    (let [[P P1] PS]
       (fn [st ok fail]
         (fn []
-          (parser st ok fail))))))
+          (P st (fn [st] (P1 st ok fail)) fail))))
+    (let [[P P1] (take-last 2 PS)
+          PS (drop-last 2 PS)]
+      (apply cat (concat PS (list (fn [st ok fail]
+                                    (fn []
+                                      (P st (fn [st] (P1 st ok fail)) fail)))))))))
 
-(defn alt* [parsers]
-  (if (seq (rest parsers))
-    (let [p (first parsers)
-          ps (alt* (rest parsers))]
-      (fn [st ok fail failures]
+(defn alt* [PS]
+  (if (= 2 (count PS))
+    (let [[P P1] PS]
+      (fn [st ok fail]
         (fn []
-          (p st ok (fn [_st failure]
-                     (ps st ok fail (conj failures failure)))))))
-    (fn [st ok fail failures]
-      ((first parsers) st ok (fn [st failure]
-                               (fail st (conj failures failure)))))))
+          (P st ok (fn [st' failure]
+                     (fn []
+                       (P1 st [{:fail failure
+                                :state st'}]
+                           ok fail)))))))
+    (let [[P P1] (take-last 2 PS)
+          PS (vec (drop-last 2 PS))]
+      (alt* (conj PS (fn [st failures ok fail]
+                       (fn []
+                         (P st ok
+                            (fn [st' failure']
+                              (fn []
+                                (P1 st failures ok
+                                    (fn [st'' failure'']
+                                      (fail st (into failures [{:fail failure'
+                                                                :state st'}
+                                                               {:fail failure''
+                                                                :state st''}]))))))))))))))
 
-(defn alt [& parsers]
-  (let [alt-parser (alt* parsers)]
+(defn alt [& PS]
+  (alt* (conj (vec PS) (fn [st failures _ok fail]
+                         (fail st failures)))))
+
+(defn star [P]
+  (fn star-fn [st ok _fail]
+    (if (:eof? st)
+      (ok st)
+      (fn []
+        (P st
+           (fn [st]
+             (star-fn st ok _fail))
+           (fn [_ _] (ok st)))))))
+
+(defn plus [P]
+  (letfn [(P' [ok]
+            (fn K [st]
+              (if (:eof? st)
+                (ok st)
+                (P st K (fn [_ _] (ok st))))))]
     (fn [st ok fail]
-      (fn []
-        (alt-parser st ok (fn [_st failures]
-                            (fail st (failure/alt st failures)))
-                    [])))))
+      (P st (P' ok) fail))))
 
-(defn star [parser]
-  (fn star* [st ok fail]
-    (fn []
-      (letfn [(ok' [st]
-                (if (state/eof? st)
-                  (ok st)
-                  (star* st ok fail)))
-              (fail' [_st _failure]
-                (ok st))]
-        (parser st ok' fail')))))
+(defn rep [N P]
+  (apply cat (map-indexed (fn [n P]
+                            (fn [st ok fail]
+                              (P st ok (fn [st failure]
+                                         (fail st {:fail :rep
+                                                   :at (inc n)
+                                                   :failure failure})))))
+                          (repeat N P))))
 
-(defn plus [parser]
-  (fn [st ok fail]
-    (fn []
-      (letfn [(ok' [st]
-                (let [p (star parser)]
-                  (fn []
-                    (p st ok fail))))]
-        (parser st ok' fail)))))
-
-(defn rep
-  ([n parser] (rep n 1 parser))
-  ([N n parser]
-   (fn [st ok fail]
-     (fn []
-       (letfn [(ok' [st]
-                 (if (= n N)
-                   (ok st)
-                   ((rep N (inc n) parser) st ok fail)))]
-         (parser st ok' fail))))))
-
-(defn opt [parser]
+(defn opt [P]
   (fn [st ok _fail]
-    (fn []
-      (letfn [(fail' [_ _]
-                (ok st))]
-        (parser st ok fail')))))
+    (P st ok (fn [_ _] (ok st)))))
 
-(defn neg [parser]
+(defn neg [P]
   (fn [st ok fail]
-    (letfn [(ok' [_st]
-              (fail st (failure/unexpected-success st)))
-            (fail' [st _failure]
-              (ok st))]
-      (fn []
-        (parser st ok' fail')))))
+    (P st
+       (fn [_st]
+         (fail st {:fail :unexpected-success}))
+       (fn [_st _]
+         (ok st)))))
 
-(defn eps []
-  (fn [st ok _fail]
-    (fn []
-      (ok st))))
+(defn wrap [P {:keys [ok-wrapper fail-wrapper]}]
+  (fn [{:keys [out sealed] :as st} ok fail]
+    (if sealed
+      (P st ok fail)
+      (P (assoc st :out [])
+       (if ok-wrapper
+         (fn [st']
+           (ok (update st' :out #(into out (ok-wrapper %)))))
+         ok)
+       (if fail-wrapper
+         (fn [st' failure]
+           (fail st' (fail-wrapper st' failure)))
+         fail)))))
+
+(defn discard [P]
+  (fn [st ok fail]
+    (P (assoc st :sealed true)
+     (fn [st]
+       (ok (dissoc st :sealed)))
+     fail)))
 
 (defn eof []
   (fn [st ok fail]
-    (fn []
-      (if (state/eof? st)
-        (ok st)
-        (fail st (failure/unexpected-eof st))))))
+    (if (:eof? st)
+      (ok st)
+      (fail st {:fail :eof}))))
 
-(defn wrap
-  ([p ok-wrapper]
-   (wrap p ok-wrapper (fn [_st failure] failure)))
-  ([p ok-wrapper fail-wrapper]
-   (fn [{:keys [out] :as st} ok fail]
-     (letfn [(ok' [st']
-               (let [out' (ok-wrapper (:out st') (partial fail st'))]
-                 (if (fn? out')
-                   out'
-                   (ok (assoc st' :out (into out out'))))))
-             (fail' [st' failure]
-               (fail st' (fail-wrapper st' failure)))]
-       (fn []
-         (p (assoc st :out []) ok' fail'))))))
-
-(defn discard [parser]
-  (fn [{:keys [out] :as st} ok fail]
-    (fn []
-      (parser st (fn [st]
-                   (ok (assoc st :out out))) fail))))
-
-(defn lookforward [check parser]
-  (fn [st ok fail]
-    (fn []
-      (check st (fn [_]
-                  (parser st ok fail))
-             fail))))
+(defn eps []
+  (fn [st ok _fail]
+    (ok st)))
