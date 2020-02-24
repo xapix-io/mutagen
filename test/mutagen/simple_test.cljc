@@ -1,15 +1,20 @@
 (ns mutagen.simple-test
-  (:require [mutagen.parsers.string :as string-parser]
+  (:require [mutagen.lexers.indexed-string :as string-parser]
+            [mutagen.combinators :as comb]
             #?(:clj [clojure.test :refer [deftest is]]
                :cljs [cljs.test :refer [deftest is] :include-macros true])))
 
+(def A (comb/wrap
+        (comb/plus (string-parser/char1 \a))
+        {:ok-wrapper (fn [xs] [(str (count xs) "A")])}))
+
+(def B (comb/wrap
+        (comb/plus (string-parser/char1 \b))
+        {:ok-wrapper (fn [xs] [(str (count xs) "B")])}))
+
 (deftest basic
   (let [P (string-parser/parser
-           {"A" [:plus {:ok-wrapper (fn [xs _] [(str (count xs) "A")])}
-                 [:char \a]]
-            "B" [:plus {:ok-wrapper (fn [xs _] [(str (count xs) "B")])}
-                 [:char \b]]}
-           [:star [:cat ["A"] ["B"]]])]
+           (comb/star (comb/cat A B)))]
    (is (= []
           (:result (P ""))))
    (is (= ["2A" "1B"]

@@ -134,7 +134,7 @@
                  (string/any-char))))
               (string/char1 \")
               ws)
-             (:ok-wrapper wrap-string)))
+             {:ok-wrapper wrap-string}))
 
 (defn array [itemp]
   (comb/wrap
@@ -146,7 +146,8 @@
       itemp
       (comb/star
        (comb/cat
-        (string/char1 \,)
+        (comb/discard
+         (string/char1 \,))
         ws
         itemp)))
      (comb/eps))
@@ -158,7 +159,8 @@
   (comb/wrap
    (comb/cat
     keyp
-    (string/char1 \:)
+    (comb/discard
+     (string/char1 \:))
     ws
     valuep)
    {:ok-wrapper wrap-member}))
@@ -174,7 +176,8 @@
         memberp
         (comb/star
          (comb/cat
-          (string/char1 \,)
+          (comb/discard
+           (string/char1 \,))
           ws
           memberp)))
        (comb/eps))
@@ -183,23 +186,23 @@
      {:ok-wrapper wrap-object})))
 
 (def json
-  (comb/cat
-   (comb/alt
-    null
-    boolean
-    string
-    number
-    (object string json)
-    (array json))
-   (comb/eof)))
+  (comb/alt
+   null
+   boolean
+   string
+   number
+   (object string json)
+   (array json)))
 
-(def parser (string/parser json))
+(def parser (string/parser (comb/cat json (comb/eof))))
 
 (defn parse [json-string]
   (parser json-string))
 
 (comment
 
-  (parse "{}")
+  (parse "[1,2,3]")
+
+  ((string/parser boolean) "false")
 
   )
