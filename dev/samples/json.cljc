@@ -189,7 +189,7 @@
            object
            array))
 
-(def parser (m/parser (m/cat (m/alt json m/eps) ws)))
+(def parser (m/parser (m/cat json m/eof)))
 
 (defn parse [json-string]
   (parser json-string :out (fn [_ failure] failure)))

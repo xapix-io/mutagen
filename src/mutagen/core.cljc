@@ -194,7 +194,8 @@
            ok)
          (if wrap-fail
            (fn [st' failure]
-             (fail st' (wrap-fail failure)))
+             (fail st' (wrap-fail failure {:prev-ok st
+                                           :st st'})))
            fail)))))
 
 (defn parser [P]
