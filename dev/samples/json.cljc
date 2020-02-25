@@ -86,21 +86,21 @@
 (def non-zero-digit (apply m/some-char (m/char-range \1 \9)))
 
 (def digit (m/alt
-            (m/char \0)
+            (m/char1 \0)
             non-zero-digit))
 
 (def integer (m/alt
               (m/cat
                non-zero-digit
                (m/star digit))
-              (m/char \0)))
+              (m/char1 \0)))
 
 (def number (m/wrap
              (m/cat
               integer
               (m/opt
                (m/cat
-                (m/char \.)
+                (m/char1 \.)
                 (m/plus digit)))
               (m/opt
                (m/cat
@@ -113,32 +113,32 @@
 
 (def string (m/wrap
              (m/cat
-              (m/char \")
+              (m/char1 \")
               (m/star
                (m/alt
                 (m/wrap
                  (m/cat
-                  (m/char \\ )
+                  (m/char1 \\ )
                   (apply m/some-char [\" \\ \b \f \n \r \t]))
                  {:wrap-res wrap-escape-char})
                 (m/wrap
                  (m/cat
-                  (m/char \\ )
-                  (m/char \u)
+                  (m/char1 \\ )
+                  (m/char1 \u)
                   (m/rep 4 (apply m/some-char (concat (m/char-range \0 \9)
                                                       (m/char-range \a \f)
                                                       (m/char-range \A \F)))))
                  {:wrap-res wrap-unicode-char})
                 (m/cat
-                 (m/neg (m/char \"))
+                 (m/neg (m/char1 \"))
                  m/any-char)))
-              (m/char \")
+              (m/char1 \")
               ws)
              {:wrap-res wrap-string}))
 
 (def array (m/wrap
             (m/cat
-             (m/char \[)
+             (m/char1 \[)
              ws
              (m/alt
               (m/cat
@@ -146,11 +146,11 @@
                (m/star
                 (m/cat
                  (m/skip
-                  (m/char \,))
+                  (m/char1 \,))
                  ws
                  (m/resolve json))))
               m/eps)
-             (m/char \])
+             (m/char1 \])
              ws)
             {:wrap-res wrap-array}))
 
@@ -158,14 +158,14 @@
              (m/cat
               string
               (m/skip
-               (m/char \:))
+               (m/char1 \:))
               ws
               (m/resolve json))
              {:wrap-res wrap-member}))
 
 (def object (m/wrap
              (m/cat
-              (m/char \{)
+              (m/char1 \{)
               ws
               (m/alt
                (m/cat
@@ -173,11 +173,11 @@
                 (m/star
                  (m/cat
                   (m/skip
-                   (m/char \,))
+                   (m/char1 \,))
                   ws
                   member)))
                m/eps)
-              (m/char \})
+              (m/char1 \})
               ws)
              {:wrap-res wrap-object}))
 

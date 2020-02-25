@@ -1,9 +1,8 @@
 (ns mutagen.core
-  (:refer-clojure :exclude [char cat resolve]))
+  (:refer-clojure :exclude [cat resolve]))
 
 (defn char-range [start end]
-  (map #?(:clj clojure.core/char
-          :cljs cljs.core/char)
+  (map char
        (range #?(:clj (int start) :cljs (.charCodeAt start 0))
               (inc #?(:clj (int end) :cljs (.charCodeAt end 0))))))
 

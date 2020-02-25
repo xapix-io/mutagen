@@ -4,11 +4,11 @@
                :cljs [cljs.test :refer [deftest is] :include-macros true])))
 
 (def A (m/wrap
-        (m/plus (m/char \a))
+        (m/plus (m/char1 \a))
         {:wrap-res (fn [xs] [(str (count xs) "A")])}))
 
 (def B (m/wrap
-        (m/plus (m/char \b))
+        (m/plus (m/char1 \b))
         {:wrap-res (fn [xs] [(str (count xs) "B")])}))
 
 (deftest basic
