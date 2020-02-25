@@ -1,10 +1,8 @@
 (ns samples.json
   (:refer-clojure :exclude [array boolean])
-  (:require [mutagen.lexers.indexed-string :as string]
-            [mutagen.lexers.string :refer [char-range]]
-            #?(:clj [clojure.tools.reader.edn :as edn]
+  (:require #?(:clj [clojure.tools.reader.edn :as edn]
                :cljs [cljs.tools.reader.edn :as edn])
-            [mutagen.combinators :as comb]))
+            [mutagen.core :as m #?@(:cljs [:require-macros true])]))
 
 (defn wrap-const [token content]
   [(assoc token :content content)])
@@ -66,143 +64,138 @@
     :node :object
     :content (vec (rest (butlast xs)))}])
 
-(def ws (comb/discard
-         (comb/star (string/char* [\space \backspace \formfeed \newline \return \tab]))))
+(declare json)
 
-(def null (comb/wrap
-           (comb/cat
-            (string/word "null")
+(def ws (m/skip
+         (m/star (apply m/some-char [\space \backspace \formfeed \newline \return \tab]))))
+
+(def null (m/wrap
+           (m/cat
+            (m/word "null")
             ws)
-           {:ok-wrapper wrap-null}))
+           {:wrap-res wrap-null}))
 
-(def boolean (comb/wrap
-              (comb/cat
-               (comb/alt
-                (string/word "true")
-                (string/word "false"))
+(def boolean (m/wrap
+              (m/cat
+               (m/alt
+                (m/word "true")
+                (m/word "false"))
                ws)
-              {:ok-wrapper wrap-boolean}))
+              {:wrap-res wrap-boolean}))
 
-(def non-zero-digit (string/char* (char-range \1 \9)))
+(def non-zero-digit (apply m/some-char (m/char-range \1 \9)))
 
-(def digit (comb/alt
-            (string/char1 \0)
+(def digit (m/alt
+            (m/char \0)
             non-zero-digit))
 
-(def integer (comb/alt
-              (comb/cat
+(def integer (m/alt
+              (m/cat
                non-zero-digit
-               (comb/star digit))
-              (string/char1 \0)))
+               (m/star digit))
+              (m/char \0)))
 
-(def number (comb/wrap
-             (comb/cat
+(def number (m/wrap
+             (m/cat
               integer
-              (comb/opt
-               (comb/cat
-                (string/char1 \.)
-                (comb/plus digit)))
-              (comb/opt
-               (comb/cat
-                (string/char* [\e \E])
-                (comb/opt
-                 (string/char* [\- \+]))
+              (m/opt
+               (m/cat
+                (m/char \.)
+                (m/plus digit)))
+              (m/opt
+               (m/cat
+                (apply m/some-char [\e \E])
+                (m/opt
+                 (apply m/some-char [\- \+]))
                 integer))
               ws)
-             {:ok-wrapper wrap-number}))
+             {:wrap-res wrap-number}))
 
-(def string (comb/wrap
-             (comb/cat
-              (string/char1 \")
-              (comb/star
-               (comb/alt
-                (comb/wrap
-                 (comb/cat
-                  (string/char1 \\ )
-                  (string/char* [\" \\ \b \f \n \r \t]))
-                 {:ok-wrapper wrap-escape-char})
-                (comb/wrap
-                 (comb/cat
-                  (string/char1 \\ )
-                  (string/char1 \u)
-                  (comb/rep 4 (string/char* (concat (char-range \0 \9)
-                                                    (char-range \a \f)
-                                                    (char-range \A \F)))))
-                 {:ok-wrapper wrap-unicode-char})
-                (comb/cat
-                 (comb/neg (string/char1 \"))
-                 (string/any-char))))
-              (string/char1 \")
+(def string (m/wrap
+             (m/cat
+              (m/char \")
+              (m/star
+               (m/alt
+                (m/wrap
+                 (m/cat
+                  (m/char \\ )
+                  (apply m/some-char [\" \\ \b \f \n \r \t]))
+                 {:wrap-res wrap-escape-char})
+                (m/wrap
+                 (m/cat
+                  (m/char \\ )
+                  (m/char \u)
+                  (m/rep 4 (apply m/some-char (concat (m/char-range \0 \9)
+                                                      (m/char-range \a \f)
+                                                      (m/char-range \A \F)))))
+                 {:wrap-res wrap-unicode-char})
+                (m/cat
+                 (m/neg (m/char \"))
+                 m/any-char)))
+              (m/char \")
               ws)
-             {:ok-wrapper wrap-string}))
+             {:wrap-res wrap-string}))
 
-(defn array [itemp]
-  (comb/wrap
-   (comb/cat
-    (string/char1 \[)
-    ws
-    (comb/alt
-     (comb/cat
-      itemp
-      (comb/star
-       (comb/cat
-        (comb/discard
-         (string/char1 \,))
-        ws
-        itemp)))
-     (comb/eps))
-    (string/char1 \])
-    ws)
-   {:ok-wrapper wrap-array}))
+(def array (m/wrap
+            (m/cat
+             (m/char \[)
+             ws
+             (m/alt
+              (m/cat
+               (m/resolve json)
+               (m/star
+                (m/cat
+                 (m/skip
+                  (m/char \,))
+                 ws
+                 (m/resolve json))))
+              m/eps)
+             (m/char \])
+             ws)
+            {:wrap-res wrap-array}))
 
-(defn member [keyp valuep]
-  (comb/wrap
-   (comb/cat
-    keyp
-    (comb/discard
-     (string/char1 \:))
-    ws
-    valuep)
-   {:ok-wrapper wrap-member}))
+(def member (m/wrap
+             (m/cat
+              string
+              (m/skip
+               (m/char \:))
+              ws
+              (m/resolve json))
+             {:wrap-res wrap-member}))
 
-(defn object [keyp valuep]
-  (let [memberp (member keyp valuep)]
-    (comb/wrap
-     (comb/cat
-      (string/char1 \{)
-      ws
-      (comb/alt
-       (comb/cat
-        memberp
-        (comb/star
-         (comb/cat
-          (comb/discard
-           (string/char1 \,))
-          ws
-          memberp)))
-       (comb/eps))
-      (string/char1 \})
-      ws)
-     {:ok-wrapper wrap-object})))
+(def object (m/wrap
+             (m/cat
+              (m/char \{)
+              ws
+              (m/alt
+               (m/cat
+                member
+                (m/star
+                 (m/cat
+                  (m/skip
+                   (m/char \,))
+                  ws
+                  member)))
+               m/eps)
+              (m/char \})
+              ws)
+             {:wrap-res wrap-object}))
 
-(def json
-  (comb/alt
-   null
-   boolean
-   string
-   number
-   (object string json)
-   (array json)))
+(def json (m/alt
+           null
+           boolean
+           string
+           number
+           object
+           array))
 
-(def parser (string/parser (comb/cat json (comb/eof))))
+(def parser (m/parser (m/cat (m/alt json m/eps) ws)))
 
 (defn parse [json-string]
-  (parser json-string))
+  (parser json-string :out (fn [_ failure] failure)))
 
 (comment
 
   (parse "[1,2,3]")
-
-  ((string/parser boolean) "false")
 
   )

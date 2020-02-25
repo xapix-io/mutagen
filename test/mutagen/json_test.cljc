@@ -5,68 +5,68 @@
 
 (deftest scalars
   (testing "empty string"
-    (is (= nil (:result (json/parse "")))))
+    (is (= [] (json/parse ""))))
 
   (testing "null"
     (is (= [{:range [[1 1] [1 4]], :node :const, :content nil}]
-           (:result (json/parse "null")))))
+           (json/parse "null"))))
 
   (testing "booleans"
     (is (= [{:range [[1 1] [1 4]], :node :const, :content true}]
-           (:result (json/parse "true"))))
+           (json/parse "true")))
     (is (= [{:range [[1 1] [1 5]], :node :const, :content false}]
-           (:result (json/parse "false")))))
+           (json/parse "false"))))
 
   (testing "numbers"
 
     (testing "integer"
       (is (= [{:range [[1 1] [1 1]], :node :const, :content 0}]
-             (:result (json/parse "0"))))
+             (json/parse "0")))
       (is (= [{:range [[1 1] [1 1]], :node :const, :content 1}]
-             (:result (json/parse "1"))))
+             (json/parse "1")))
       (is (= [{:range [[1 1] [1 2]], :node :const, :content 42}]
-             (:result (json/parse "42")))))
+             (json/parse "42"))))
 
     (testing "floats"
       (is (= [{:range [[1 1] [1 3]], :node :const, :content 0.0}]
-             (:result (json/parse "0.0"))))
+             (json/parse "0.0")))
       (is (= [{:range [[1 1] [1 6]], :node :const, :content 1.0123}]
-             (:result (json/parse "1.0123"))))
+             (json/parse "1.0123")))
       (is (= [{:range [[1 1] [1 6]], :node :const, :content 42.321}]
-             (:result (json/parse "42.321")))))
+             (json/parse "42.321"))))
 
     (testing "exponential format"
       (is (= [{:range [[1 1] [1 5]], :node :const, :content 0.0}]
-             (:result (json/parse "0.0e0"))))
+             (json/parse "0.0e0")))
       (is (= [{:range [[1 1] [1 7]], :node :const, :content 1.0E-12}]
-             (:result (json/parse "1.0E-12"))))
+             (json/parse "1.0E-12")))
       (is (= [{:range [[1 1] [1 8]], :node :const, :content 4.2E11}]
-             (:result (json/parse "0.42e+12"))))))
+             (json/parse "0.42e+12")))))
 
   (testing "strings"
 
     (testing "empty"
       (is (= [{:range [[1 1] [1 2]], :node :const, :content ""}]
-             (:result (json/parse "\"\"")))))
+             (json/parse "\"\""))))
 
     (testing "simple"
       (is (= [{:range [[1 1] [1 5]], :node :const, :content "foo"}]
-             (:result (json/parse "\"foo\"")))))
+             (json/parse "\"foo\""))))
 
     (testing "with unicode characters"
       (is (= [{:range [[1 1] [1 8]], :node :const, :content "﷽"}]
-             (:result (json/parse "\"\\uFDFD\"")))))
+             (json/parse "\"\\uFDFD\""))))
 
     (testing "with escape characters"
       (is (= [{:range [[1 1] [1 35]],
                :node :const,
                :content "hello world\"\b\f\n\r\totherchars"}]
-             (:result (json/parse "\"hello world\\\"\\b\\f\\n\\r\\totherchars\"")))))))
+             (json/parse "\"hello world\\\"\\b\\f\\n\\r\\totherchars\""))))))
 
 (deftest collections
   (testing "empty array"
     (is (= [{:range [[1 1] [1 2]], :node :array, :content []}]
-           (:result (json/parse "[]")))))
+           (json/parse "[]"))))
 
   (testing "array"
     (is (= [{:range [[1 1] [8 0]],
@@ -96,18 +96,18 @@
                 [{:range [[7 5] [7 9]], :node :const, :content "foo"}
                  {:range [[7 12] [7 12]], :node :const, :content 1}],
                 :node :member}]}]}]
-           (:result (json/parse "[
+           (json/parse "[
   null, true,
 false,
 0, 42, 42.01, 42.01e-3
 , \"foo\",
 [], [1,2,3],
 {}, {\"foo\": 1}
-]")))))
+]"))))
 
   (testing "empty object"
     (is (= [{:range [[1 1] [1 2]], :node :object, :content []}]
-           (:result (json/parse "{}")))))
+           (json/parse "{}"))))
 
   (testing "object"
     (is (= [{:range [[1 1] [7 0]],
@@ -158,10 +158,10 @@ false,
                    {:range [[6 37] [6 40]], :node :const, :content true}],
                   :node :member}]}],
               :node :member}]}]
-           (:result (json/parse "{\"string\": \"string\", \"null\":null
+           (json/parse "{\"string\": \"string\", \"null\":null
 ,\"boolean\":
 true,
 \"boolean2\"    :     false,
 \"array of numbers\":[0, 1, 42, 42.32],
 \" nested objects \\ufdfd\": {\"nested\": true}
-}"))))))
+}")))))

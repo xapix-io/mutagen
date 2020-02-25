@@ -1,62 +1,62 @@
 (ns perf-check
-  (:require [mutagen.lexers.string :as string]
-            [mutagen.combinators :as comb]
+  (:require [mutagen.core :as m]
             [blancas.kern.core :as k]
             [clojure.java.io :as io]
             [criterium.core :as cc]))
 
 (def digit
-  (string/char* (string/char-range \0 \9)))
+  (apply m/some-char (m/char-range \0 \9)))
 
 (def program
-  (string/char* (string/char-range \a \p)))
+  (apply m/some-char (m/char-range \a \p)))
 
 (def position
-  (comb/cat digit (comb/opt digit)))
+  (m/wrap
+   (m/cat digit (m/opt digit))
+   {:wrap-res (fn [xs] [(apply str (map :ch xs))])}))
 
 (def partner
-  (comb/wrap
-   (comb/cat
-    (comb/discard (string/char1 \p))
+  (m/wrap
+   (m/cat
+    (m/skip (m/char \p))
     program
-    (comb/discard (string/char1 \/))
+    (m/skip (m/char \/))
     program)
-   {:ok-wrapper (fn [xs] [(cons :PARTNER xs)])}))
+   {:wrap-res (fn [xs] [(cons :PARTNER (map (comp str :ch) xs))])}))
 
 (def exchange
-  (comb/wrap
-   (comb/cat
-    (comb/discard (string/char1 \x))
+  (m/wrap
+   (m/cat
+    (m/skip (m/char \x))
     position
-    (comb/discard (string/char1 \/))
+    (m/skip (m/char \/))
     position)
-   {:ok-wrapper (fn [xs] [(cons :EXCHANGE xs)])}))
+   {:wrap-res (fn [xs] [(cons :EXCHANGE xs)])}))
 
 (def spin
-  (comb/wrap
-   (comb/cat
-    (comb/discard (string/char1 \s))
+  (m/wrap
+   (m/cat
+    (m/skip (m/char \s))
     position)
-   {:ok-wrapper (fn [xs] [(cons :SPIN xs)])}))
+   {:wrap-res (fn [xs] [(cons :SPIN xs)])}))
 
 (def instruction
-  (comb/alt
+  (m/alt
    partner
    exchange
    spin))
 
 (def root
-  (comb/cat
+  (m/cat
    instruction
-   (comb/star
-    (comb/cat
-     (comb/discard (string/char1 \,))
-     instruction))))
+   (m/star
+    (m/cat
+     (m/skip (m/char \,))
+     instruction))
+   (m/skip (m/char \newline))
+   m/eof))
 
-(def parser (string/parser root))
-
-(defn mutagen-parser [st]
-  (:result (parser st)))
+(def mutagen-parser (m/parser root))
 
 ;; Kern parser
 
@@ -94,8 +94,8 @@
 
   (def st (slurp (io/resource "sample_data")))
 
-  (cc/bench (doall (mutagen-parser st)))
+  (cc/quick-bench (doall (mutagen-parser st :out (fn [_ failure] failure))))
 
-  (cc/bench (doall (kern-parser st)))
+  (cc/quick-bench (doall (kern-parser st)))
 
   )
