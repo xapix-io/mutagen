@@ -6,36 +6,36 @@
             [criterium.core :as cc]))
 
 (g/defgrammar
-  :digit [:some-char [:range \0 \9]]
-  :program [:some-char [:range \a \p]]
-  :position [:cat {:wrap-res (fn [xs] [(apply str (map :ch xs))])}
-             [:digit]
-             [:opt [:digit]]]
-  :partner [:cat {:wrap-res (fn [xs] [(cons :PARTNER (map (comp str :ch) xs))])}
-            [:skip [:char \p]]
-            [:program]
-            [:skip [:char \/]]
-            [:program]]
-  :exchange [:cat {:wrap-res (fn [xs] [(cons :EXCHANGE xs)])}
-             [:skip [:char \x]]
-             [:position]
+  {:digit [:some-char [:range \0 \9]]
+   :program [:some-char [:range \a \p]]
+   :position [:cat {:wrap-res (fn [xs] [(apply str (map :ch xs))])}
+              [:digit]
+              [:opt [:digit]]]
+   :partner [:cat {:wrap-res (fn [xs] [(cons :PARTNER (map (comp str :ch) xs))])}
+             [:skip [:char \p]]
+             [:program]
              [:skip [:char \/]]
-             [:position]]
-  :spin [:cat {:wrap-res (fn [xs] [(cons :SPIN xs)])}
-         [:skip [:char \s]]
-         [:position]]
-  :instruction [:alt
-                [:partner]
-                [:exchange]
-                [:spin]]
-  :S [:cat
-      [:instruction]
-      [:star
-       [:cat
-        [:skip [:char \,]]
-        [:instruction]]]
-      [:skip [:char \newline]]
-      [:eof]])
+             [:program]]
+   :exchange [:cat {:wrap-res (fn [xs] [(cons :EXCHANGE xs)])}
+              [:skip [:char \x]]
+              [:position]
+              [:skip [:char \/]]
+              [:position]]
+   :spin [:cat {:wrap-res (fn [xs] [(cons :SPIN xs)])}
+          [:skip [:char \s]]
+          [:position]]
+   :instruction [:alt
+                 [:partner]
+                 [:exchange]
+                 [:spin]]
+   :S [:cat
+       [:instruction]
+       [:star
+        [:cat
+         [:skip [:char \,]]
+         [:instruction]]]
+       [:skip [:char \newline]]
+       [:eof]]})
 
 (def mutagen-parser (m/parser S))
 
