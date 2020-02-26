@@ -1,5 +1,5 @@
 (ns mutagen.core
-  (:refer-clojure :exclude [cat resolve]))
+  (:refer-clojure :exclude [cat resolve keep]))
 
 (defn char-range [start end]
   (map char
@@ -203,6 +203,13 @@
     (fn []
       (P st (fn [_]
               (ok st))
+         fail))))
+
+(defn keep [P]
+  (fn [st ok fail]
+    (fn []
+      (P st (fn [st']
+              (ok (assoc st :out (:out st'))))
          fail))))
 
 (defn parser [P]
