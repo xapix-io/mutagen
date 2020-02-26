@@ -1,4 +1,4 @@
-(ns mutagen.core
+(ns mutagen.combinators
   (:refer-clojure :exclude [cat resolve keep]))
 
 (defn char-range [start end]
@@ -220,3 +220,9 @@
                    :col 1
                    :out []}
                 ok fail)))
+
+(comment
+
+  ((parser (keep (char1 \a))) "aaa" prn prn)
+
+  )

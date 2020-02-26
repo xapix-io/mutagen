@@ -1,64 +1,43 @@
 (ns perf-check
-  (:require [mutagen.core :as m]
+  (:require [mutagen.combinators :as m]
+            [mutagen.grammar :as g]
             [blancas.kern.core :as k]
             [clojure.java.io :as io]
             [criterium.core :as cc]))
 
-(def digit
-  (apply m/some-char (m/char-range \0 \9)))
+(g/defgrammar
+  :digit [:some-char [:range \0 \9]]
+  :program [:some-char [:range \a \p]]
+  :position [:cat {:wrap-res (fn [xs] [(apply str (map :ch xs))])}
+             [:digit]
+             [:opt [:digit]]]
+  :partner [:cat {:wrap-res (fn [xs] [(cons :PARTNER (map (comp str :ch) xs))])}
+            [:skip [:char \p]]
+            [:program]
+            [:skip [:char \/]]
+            [:program]]
+  :exchange [:cat {:wrap-res (fn [xs] [(cons :EXCHANGE xs)])}
+             [:skip [:char \x]]
+             [:position]
+             [:skip [:char \/]]
+             [:position]]
+  :spin [:cat {:wrap-res (fn [xs] [(cons :SPIN xs)])}
+         [:skip [:char \s]]
+         [:position]]
+  :instruction [:alt
+                [:partner]
+                [:exchange]
+                [:spin]]
+  :S [:cat
+      [:instruction]
+      [:star
+       [:cat
+        [:skip [:char \,]]
+        [:instruction]]]
+      [:skip [:char \newline]]
+      [:eof]])
 
-(def program
-  (apply m/some-char (m/char-range \a \p)))
-
-(def position
-  (m/wrap
-   (m/cat digit (m/opt digit))
-   {:wrap-res (fn [xs] [(apply str (map :ch xs))])}))
-
-(def partner
-  (m/wrap
-   (m/cat
-    (m/skip (m/char \p))
-    program
-    (m/skip (m/char \/))
-    program)
-   {:wrap-res (fn [xs] [(cons :PARTNER (map (comp str :ch) xs))])}))
-
-(def exchange
-  (m/wrap
-   (m/cat
-    (m/skip (m/char \x))
-    position
-    (m/skip (m/char \/))
-    position)
-   {:wrap-res (fn [xs] [(cons :EXCHANGE xs)])}))
-
-(def spin
-  (m/wrap
-   (m/cat
-    (m/skip (m/char \s))
-    position)
-   {:wrap-res (fn [xs] [(cons :SPIN xs)])}))
-
-(def instruction
-  (m/alt
-   partner
-   exchange
-   spin))
-
-(def root
-  (m/cat
-   instruction
-   (m/star
-    (m/cat
-     (m/skip (m/char \,))
-     instruction))
-   (m/skip (m/char \newline))
-   m/eof))
-
-(def mutagen-parser (m/parser root))
-
-;; Kern parser
+(def mutagen-parser (m/parser S))
 
 (def parse-partner
   (k/bind [_  (k/sym* \p)
@@ -93,6 +72,8 @@
   ;; GOAL: 7ms - 110ms
 
   (def st (slurp (io/resource "sample_data")))
+
+  ((m/parser S) st :out prn)
 
   (cc/quick-bench (doall (mutagen-parser st :out (fn [_ failure] failure))))
 
