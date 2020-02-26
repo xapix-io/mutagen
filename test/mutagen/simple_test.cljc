@@ -1,5 +1,5 @@
 (ns mutagen.simple-test
-  (:require [mutagen.core :as m]
+  (:require [mutagen.combinators :as m]
             #?(:clj [clojure.test :refer [deftest is]]
                :cljs [cljs.test :refer [deftest is] :include-macros true])))
 
