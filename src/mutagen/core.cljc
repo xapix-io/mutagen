@@ -198,6 +198,13 @@
                                            :st st'})))
            fail)))))
 
+(defn lookahead [P]
+  (fn [st ok fail]
+    (fn []
+      (P st (fn [_]
+              (ok st))
+         fail))))
+
 (defn parser [P]
   (fn [string ok fail]
     (trampoline P {:in string
