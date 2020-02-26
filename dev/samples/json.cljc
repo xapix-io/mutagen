@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [array boolean])
   (:require #?(:clj [clojure.tools.reader.edn :as edn]
                :cljs [cljs.tools.reader.edn :as edn])
-            [mutagen.core :as m #?@(:cljs [:require-macros true])]))
+            [mutagen.combinators :as m #?@(:cljs [:require-macros true])]))
 
 (defn wrap-const [token content]
   [(assoc token :content content)])

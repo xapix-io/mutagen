@@ -129,8 +129,11 @@
 
 (comment
 
+  (defn wrap-A [xs]
+    (cons "A" xs))
+
   (defgrammar
-    {:A [:char {:wrap (fn [xs] xs)} \a]
-     :B [:char {:wrap (fn [xs] xs)} \b]})
+    {:A [:char {:wrap-res wrap-A} \a]
+     :B [:char {:wrap-res (fn [xs] xs)} \b]})
 
   )

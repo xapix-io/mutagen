@@ -5,17 +5,17 @@
 
 (deftest scalars
   (testing "empty string"
-    (is (= {:type :mutagen.core/alt,
+    (is (= {:type :mutagen.combinators/alt,
             :failures
-            '({:type :mutagen.core/unexpected-eof, :expected \[}
-              {:type :mutagen.core/unexpected-eof, :expected \{}
-              ({:type :mutagen.core/unexpected-eof, :expected \0}
-               {:type :mutagen.core/unexpected-eof,
+            '({:type :mutagen.combinators/unexpected-eof, :expected \[}
+              {:type :mutagen.combinators/unexpected-eof, :expected \{}
+              ({:type :mutagen.combinators/unexpected-eof, :expected \0}
+               {:type :mutagen.combinators/unexpected-eof,
                 :expected-one-of #{\1 \2 \3 \4 \5 \6 \7 \8 \9}})
-              {:type :mutagen.core/unexpected-eof, :expected \"}
-              ({:type :mutagen.core/unexpected-eof, :expected "false"}
-               {:type :mutagen.core/unexpected-eof, :expected "true"})
-              {:type :mutagen.core/unexpected-eof, :expected "null"})}
+              {:type :mutagen.combinators/unexpected-eof, :expected \"}
+              ({:type :mutagen.combinators/unexpected-eof, :expected "false"}
+               {:type :mutagen.combinators/unexpected-eof, :expected "true"})
+              {:type :mutagen.combinators/unexpected-eof, :expected "null"})}
            (json/parse ""))))
 
   (testing "null"
