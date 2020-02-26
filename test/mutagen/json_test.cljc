@@ -5,7 +5,18 @@
 
 (deftest scalars
   (testing "empty string"
-    (is (= [] (json/parse ""))))
+    (is (= {:type :mutagen.core/alt,
+            :failures
+            '({:type :mutagen.core/unexpected-eof, :expected \[}
+              {:type :mutagen.core/unexpected-eof, :expected \{}
+              ({:type :mutagen.core/unexpected-eof, :expected \0}
+               {:type :mutagen.core/unexpected-eof,
+                :expected-one-of #{\1 \2 \3 \4 \5 \6 \7 \8 \9}})
+              {:type :mutagen.core/unexpected-eof, :expected \"}
+              ({:type :mutagen.core/unexpected-eof, :expected "false"}
+               {:type :mutagen.core/unexpected-eof, :expected "true"})
+              {:type :mutagen.core/unexpected-eof, :expected "null"})}
+           (json/parse ""))))
 
   (testing "null"
     (is (= [{:range [[1 1] [1 4]], :node :const, :content nil}]
