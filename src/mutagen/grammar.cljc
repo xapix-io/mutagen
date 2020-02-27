@@ -16,8 +16,8 @@
 (defmacro emit-char [_opts ch]
   `(m/char1 ~ch))
 
-(defmacro emit-wrap [opts P]
-  `(m/wrap (emit ~P) ~opts))
+(defmacro emit-wrap [NS opts P]
+  `(m/wrap (emit ~NS ~P) ~opts))
 
 (defmacro emit-some-char [_opts & chs]
   `(m/some-char ~@(mapcat normalize-chars chs)))
@@ -58,7 +58,7 @@
 (defmacro emit-resolve [_opts to-resolve & _args]
   `(m/resolve ~to-resolve))
 
-(defmacro emit [[t & args :as C]]
+(defmacro emit [NS [t & args :as C]]
   (let [opts (if (map? (first args))
                (first args)
                {})
@@ -67,9 +67,9 @@
                args)]
     (if (and ((some-fn :wrap-res :wrap-fail) opts)
              (not= :wrap t))
-      `(emit [:wrap ~opts [~t ~(dissoc opts :wrap-res :wrap-fail) ~@args]])
+      `(emit ~NS [:wrap ~opts [~t ~(dissoc opts :wrap-res :wrap-fail) ~@args]])
       (case t
-        :wrap      `(emit-wrap ~opts ~@args)
+        :wrap      `(emit-wrap ~NS ~opts ~@args)
         :char      `(emit-char ~opts ~@args)
         :some-char `(emit-some-char ~opts ~@args)
         :any-char  `m/any-char
@@ -86,12 +86,13 @@
         :skip      `(emit-skip ~opts ~@args)
         :lookahead `(emit-lookahead ~opts ~@args)
         :keep      `(emit-keep ~opts ~@args)
+        :resolve   `(emit-resolve ~opts ~@args)
 
         (if (keyword? t)
-          `(emit-resolve ~opts ~(symbol (name t)) ~@args)
+          (symbol (str NS "->" (name t)))
           (throw (ex-info "Unknown combinator" {:combinator C})))))))
 
-(defmacro recursive-emit [P]
+(defmacro recursive-emit [NS P]
   (postwalk
    (fn [x]
      (if (and (vector? x)
@@ -100,40 +101,58 @@
                         (= :range (first x))
                         (char? (second x))
                         (char? (last x)))))
-       (list 'mutagen.grammar/emit x)
+       (list 'mutagen.grammar/emit NS x)
        x))
    P))
 
-(defmacro defgrammar [bindings]
-  (let [helpers (atom {})
-        bindings (->> bindings
+(defmacro defgrammar [gname & bindings]
+  (let [grammar-ns (name gname)
+        helpers (atom {})
+        to-declare (atom #{})
+        bindings (->> (partition 2 bindings)
                       (map (fn [[bind-name bind-parser]]
-                             [(symbol (name bind-name))
-                              (prewalk
-                               (fn [x]
-                                 (if (and (list? x) (= 'fn (first x)))
-                                   (if-let [fn-s (get @helpers x)]
-                                     fn-s
-                                     (let [fn-s (gensym)]
-                                       (swap! helpers assoc x fn-s)
-                                       fn-s))
-                                   x))
-                               bind-parser)]))
-                      (into {}))]
+                             (let [bind-name (symbol (str grammar-ns "->" (name bind-name)))]
+                               [bind-name
+                                (prewalk
+                                 (fn [x]
+                                   (cond
+                                     (and (map-entry? x)
+                                          (#{:wrap-res :wrap-fail} (first x)))
+                                     (if-let [fn-s (get @helpers (second x))]
+                                       [(first x) (symbol (name fn-s))]
+                                       (let [fn-s (gensym)]
+                                         (swap! helpers assoc (second x) fn-s)
+                                         [(first x) (symbol (name fn-s))]))
+
+                                     (and (vector? x)
+                                          (= :resolve (first x)))
+                                     (do
+                                       (swap! to-declare conj (symbol (str grammar-ns "->" (-> x second first name))))
+                                       x)
+
+                                     :else
+                                     x))
+                                 bind-parser)])))
+                      (into []))]
     `(do
-       (declare ~@(keys bindings))
        ~@(for [[helper-body helper-name] @helpers]
            `(def ~helper-name ~helper-body))
+       (declare ~@(seq @to-declare))
        ~@(for [[bind-name parser] bindings]
-           `(def ~bind-name (recursive-emit ~parser))))))
+           `(def ~bind-name (recursive-emit ~grammar-ns ~parser)))
+       )))
+
+(defmacro defparser [pname grammar start]
+  (let [start-production (symbol (str (name grammar) "->" (name start)))]
+    `(def ~pname (m/parser ~start-production))))
 
 (comment
 
   (defn wrap-A [xs]
     (cons "A" xs))
 
-  (defgrammar
-    {:A [:char {:wrap-res wrap-A} \a]
-     :B [:char {:wrap-res (fn [xs] xs)} \b]})
+  (defgrammar Sample
+    :A [:char {:wrap-res wrap-A} \a]
+    :B [:cat [:resolve [:A]] [:char {:wrap-res (fn [xs] xs)} \b]])
 
   )

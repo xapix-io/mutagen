@@ -5,17 +5,7 @@
 
 (deftest scalars
   (testing "empty string"
-    (is (= {:type :mutagen.combinators/alt,
-            :failures
-            '({:type :mutagen.combinators/unexpected-eof, :expected \[}
-              {:type :mutagen.combinators/unexpected-eof, :expected \{}
-              ({:type :mutagen.combinators/unexpected-eof, :expected \0}
-               {:type :mutagen.combinators/unexpected-eof,
-                :expected-one-of #{\1 \2 \3 \4 \5 \6 \7 \8 \9}})
-              {:type :mutagen.combinators/unexpected-eof, :expected \"}
-              ({:type :mutagen.combinators/unexpected-eof, :expected "false"}
-               {:type :mutagen.combinators/unexpected-eof, :expected "true"})
-              {:type :mutagen.combinators/unexpected-eof, :expected "null"})}
+    (is (= []
            (json/parse ""))))
 
   (testing "null"
@@ -106,7 +96,7 @@
                 :content
                 [{:range [[7 5] [7 9]], :node :const, :content "foo"}
                  {:range [[7 12] [7 12]], :node :const, :content 1}],
-                :node :member}]}]}]
+                :node :pair}]}]}]
            (json/parse "[
   null, true,
 false,
@@ -128,22 +118,22 @@ false,
               :content
               [{:range [[1 2] [1 9]], :node :const, :content "string"}
                {:range [[1 12] [1 19]], :node :const, :content "string"}],
-              :node :member}
+              :node :pair}
              {:range [[1 22] [1 32]],
               :content
               [{:range [[1 22] [1 27]], :node :const, :content "null"}
                {:range [[1 29] [1 32]], :node :const, :content nil}],
-              :node :member}
+              :node :pair}
              {:range [[2 1] [3 3]],
               :content
               [{:range [[2 1] [2 9]], :node :const, :content "boolean"}
                {:range [[3 0] [3 3]], :node :const, :content true}],
-              :node :member}
+              :node :pair}
              {:range [[4 0] [4 24]],
               :content
               [{:range [[4 0] [4 9]], :node :const, :content "boolean2"}
                {:range [[4 20] [4 24]], :node :const, :content false}],
-              :node :member}
+              :node :pair}
              {:range [[5 0] [5 35]],
               :content
               [{:range [[5 0] [5 17]], :node :const, :content "array of numbers"}
@@ -154,7 +144,7 @@ false,
                  {:range [[5 23] [5 23]], :node :const, :content 1}
                  {:range [[5 26] [5 27]], :node :const, :content 42}
                  {:range [[5 30] [5 34]], :node :const, :content 42.32}]}],
-              :node :member}
+              :node :pair}
              {:range [[6 0] [6 41]],
               :content
               [{:range [[6 0] [6 23]],
@@ -167,8 +157,8 @@ false,
                   :content
                   [{:range [[6 27] [6 34]], :node :const, :content "nested"}
                    {:range [[6 37] [6 40]], :node :const, :content true}],
-                  :node :member}]}],
-              :node :member}]}]
+                  :node :pair}]}],
+              :node :pair}]}]
            (json/parse "{\"string\": \"string\", \"null\":null
 ,\"boolean\":
 true,

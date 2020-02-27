@@ -64,28 +64,22 @@
         :else
         (ok (consume-char st ch))))))
 
-(defn word [w]
-  (letfn [(get-word [pos in]
-            (if (= pos (count in))
-              ::eof
-              (try
-                (subs in pos (+ pos (count w)))
-                (catch #?(:clj java.lang.StringIndexOutOfBoundsException
-                          :cljs js/Error) _
-                  [(subs in pos (count in)) ::eof]))))]
-    (fn [{:keys [pos in] :as st} ok fail]
-      (let [w' (get-word pos in)]
-        (cond
-          (= ::eof w') (fail st {:type ::unexpected-eof
-                                 :expected w})
-          (vector? w') (fail st {:type ::unexpected-eof
-                                 :expected w
-                                 :actual w'})
-          (= w w')     (ok (reduce consume-char st w))
+(defn cat
+  ([P Q]
+   (fn [st ok fail]
+     (fn []
+       (P st
+          (fn [st]
+            (fn []
+              (Q st ok fail)))
+          fail))))
+  ([P Q & PS]
+   (reduce cat (list* P Q PS))))
 
-          :else        (fail st {:type ::unexpected-token
-                                 :expected w
-                                 :actual w'}))))))
+(defn word [w]
+  (if (= 1 (count w))
+    (char1 (first w))
+    (apply cat (map char1 w))))
 
 (def eof
   (fn [{:keys [pos in] :as st} ok fail]
@@ -98,18 +92,6 @@
 (def eps
   (fn [st ok _fail]
     (ok st)))
-
-(defn cat
-  ([P Q]
-   (fn [st ok fail]
-     (fn []
-       (P st
-          (fn [st]
-            (fn []
-              (Q st ok fail)))
-          fail))))
-  ([P Q & PS]
-   (reduce cat (list* P Q PS))))
 
 (defn alt
   ([P Q]
