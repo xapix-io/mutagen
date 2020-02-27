@@ -6,7 +6,7 @@
  {:+test {:extra-paths ["test"]
           :extra-deps {lambdaisland/kaocha {:mvn/version "0.0-590"}
                        lambdaisland/kaocha-cloverage {:mvn/version "0.0-41"}
-                       lambdaisland/kaocha-cljs {:mvn/version "0.0-68"}}}
+                       lambdaisland/kaocha-cljs {:mvn/version "0.0-71"}}}
 
   :+dev {:extra-paths ["dev"]
          :extra-deps {org.clojure/tools.reader {:mvn/version "1.3.2"}

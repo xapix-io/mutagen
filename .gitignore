@@ -6,4 +6,6 @@ node_modules/
 out/
 target/
 cljs-test-runner-out/
+.cljs_node_repl/
 **/.DS_Store
+**/*.temp

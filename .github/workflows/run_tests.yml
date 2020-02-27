@@ -15,7 +15,19 @@ jobs:
       with:
         tools-deps: latest
 
-    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '13.9.0'
+
+    - uses: actions/checkout@v2
+
+    - name: Cache NodeJS dependencies
+      uses: actions/cache@v1
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('package.json', 'package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
     - name: Cache clojure dependencies
       uses: actions/cache@v1
@@ -24,6 +36,10 @@ jobs:
         key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
         restore-keys: |
           ${{ runner.os }}-clojure-
+
+    - name: Fetch JS dependencies
+      run: |
+        npm install
 
     - name: Run tests
       run: |

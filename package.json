@@ -1,0 +1,27 @@
+{
+  "name": "mutagen",
+  "version": "0.0.0",
+  "description": "> Yet another LL(k) parser generator.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xapix-io/mutagen.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xapix-io/mutagen/issues"
+  },
+  "homepage": "https://github.com/xapix-io/mutagen#readme",
+  "devDependencies": {
+    "bufferutil": "^4.0.1",
+    "utf-8-validate": "^5.0.2",
+    "ws": "^7.2.1"
+  }
+}
