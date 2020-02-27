@@ -15,17 +15,13 @@ jobs:
       with:
         tools-deps: latest
 
-    - uses: actions/setup-node@v1
-      with:
-        node-version: '13.9.0'
-
     - uses: actions/checkout@v2
 
     - name: Cache NodeJS dependencies
       uses: actions/cache@v1
       with:
-        path: node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('package.json', 'package-lock.json') }}
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
@@ -43,4 +39,5 @@ jobs:
 
     - name: Run tests
       run: |
-        ./bin/kaocha --plugin cloverage
+        ./bin/kaocha unit-clj --plugin cloverage
+        ./bin/kaocha unit-cljs
