@@ -1,0 +1,2 @@
+{:lint-as
+ {mutagen.grammar/defgrammar clj-kondo.lint-as/def-catch-all}}
