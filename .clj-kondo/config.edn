@@ -1,2 +1,3 @@
 {:lint-as
- {mutagen.grammar/defgrammar clj-kondo.lint-as/def-catch-all}}
+ {mutagen.grammar/defgrammar clj-kondo.lint-as/def-catch-all
+  mutagen.grammar/defparser clj-kondo.lint-as/def-catch-all}}
