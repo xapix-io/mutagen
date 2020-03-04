@@ -221,6 +221,7 @@
 
        (instance? Consumed ret)
        (let [{:keys [ok state]} ret]
+         ;; (prn "---TICK" (:pos state))
          (when *keep-consumed?*
            (let [{:keys [pos]} state]
              (swap! *intermediate-states* update pos (fnil conj []) {:state (dissoc state :in)
@@ -266,7 +267,7 @@
           acc
           (assoc acc pos' states)))
       {}
-      states))))
+      (assoc-in states [0 0 :state :in] new-string)))))
 
 (defn shallow-parser
   ([P] (shallow-parser P {}))
@@ -274,6 +275,7 @@
    (fn
      ([string]
       (let [states (invalidate-states states string)]
+        ;; (prn "---STATE" (get states 0))
         (binding [*keep-consumed?* true
                   *intermediate-states* (atom states)]
           (let [pos (apply max (keys states))
@@ -305,11 +307,13 @@
 
   (let [P (cat (word "oof")
                (char1 \space)
-               (alt (cat (word "foo") (char1 \space) (word "bar"))
+               (alt (cat (word "foo") (char1 \space) (alt (word "bar")
+                                                          (word "bur")))
                     (cat (word "foo") (char1 \space) (word "baz"))))]
     (-> (shallow-parser P)
         (.invoke "oof " prn prn)
         (.invoke "oof fo")
-        (.invoke "oof foo bar")))
+        (.invoke "oof foo bar")
+        (.invoke "oof foo bur")))
 
   )
