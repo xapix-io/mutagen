@@ -1,5 +1,8 @@
 (ns mutagen.combinators
-  (:refer-clojure :exclude [cat resolve keep]))
+  (:refer-clojure :exclude [cat resolve keep trampoline]))
+
+(defrecord Consumed [state ok])
+(defrecord Begin [parser state ok fail])
 
 (defn char-range [start end]
   (map char
@@ -30,7 +33,8 @@
                   :expected ch})
 
         (= ch ch')
-        (ok (consume-char st ch))
+        (let [state (consume-char st ch)]
+          (->Consumed state ok))
 
         :else
         (fail st {:type     ::unexpected-token
@@ -47,7 +51,8 @@
                     :expected-one-of chs'})
 
           (chs' ch')
-          (ok (consume-char st ch'))
+          (let [state (consume-char st ch')]
+            (->Consumed state ok))
 
           :else
           (fail st {:type            ::unexpected-token
@@ -62,7 +67,8 @@
         (fail st {:type ::unexpected-eof})
 
         :else
-        (ok (consume-char st ch))))))
+        (let [state (consume-char st ch)]
+          (->Consumed state ok))))))
 
 (defn cat
   ([P Q]
@@ -194,6 +200,38 @@
               (ok (assoc st :out (:out st'))))
          fail))))
 
+(def ^:dynamic *keep-consumed?* false)
+(def ^:dynamic *intermediate-states*)
+
+(defn trampoline
+  ([f]
+   (let [ret (f)]
+     (cond
+       (fn? ret)
+       (recur ret)
+
+       (instance? Begin ret)
+       (let [{:keys [state parser ok fail]} ret]
+         (when *keep-consumed?*
+           (swap! *intermediate-states* assoc 0 [{:state state
+                                                  :parser parser
+                                                  :ok ok
+                                                  :fail fail}]))
+         (recur #(parser state ok fail)))
+
+       (instance? Consumed ret)
+       (let [{:keys [ok state]} ret]
+         (when *keep-consumed?*
+           (let [{:keys [pos]} state]
+             (swap! *intermediate-states* update pos (fnil conj []) {:state (dissoc state :in)
+                                                                     :ok ok})))
+         (recur #(ok state)))
+
+       :else
+       ret)))
+  ([f state ok fail]
+   (trampoline #(->Begin f state ok fail))))
+
 (defn parser [P]
   (fn [string ok fail]
     (trampoline P {:in string
@@ -203,8 +241,75 @@
                    :out []}
                 ok fail)))
 
+(defn find-common-index [string-1 string-2]
+  (let [pos (or (first (keep-indexed (fn [i [ch1 ch2]]
+                                       (when (not= ch1 ch2) (dec i)))
+                                     (map vector string-2 string-1)))
+                (dec (count string-2)))]
+    (if (< pos 0) 0 pos)))
+
+(defn invalidate-states
+  ([states]
+   (reduce-kv
+    (fn [acc [pos states]]
+      (if (> (count states) 1)
+        acc
+        (assoc acc pos states)))
+    {}
+    states))
+  ([states new-string]
+   (let [old-string (get-in states [0 0 :state :in])
+         pos (find-common-index new-string old-string)]
+     (reduce-kv
+      (fn [acc pos' states]
+        (if (or (> pos' pos) (> (count states) 1))
+          acc
+          (assoc acc pos' states)))
+      {}
+      states))))
+
+(defn shallow-parser
+  ([P] (shallow-parser P {}))
+  ([P states]
+   (fn
+     ([string]
+      (let [states (invalidate-states states string)]
+        (binding [*keep-consumed?* true
+                  *intermediate-states* (atom states)]
+          (let [pos (apply max (keys states))
+                {:keys [ok state fail parser]} (first (get states (or pos 0)))]
+            (cond
+              (and fail parser ok state)
+              (trampoline P (assoc state :in string) ok fail)
+
+              (and ok state)
+              (trampoline #(ok (assoc state :in string)))
+
+              :else
+              (throw (ex-info "Can not find intermediate state" {})))
+            (let [states @*intermediate-states*]
+              (shallow-parser P states))))))
+     ([string ok fail]
+      (binding [*keep-consumed?* true
+                *intermediate-states* (atom {})]
+        (trampoline P {:in string
+                       :pos 0
+                       :line 1
+                       :col 1
+                       :out []}
+                    ok fail)
+        (let [states @*intermediate-states*]
+          (shallow-parser P states)))))))
+
 (comment
 
-  ((parser (keep (char1 \a))) "aaa" prn prn)
+  (let [P (cat (word "oof")
+               (char1 \space)
+               (alt (cat (word "foo") (char1 \space) (word "bar"))
+                    (cat (word "foo") (char1 \space) (word "baz"))))]
+    (-> (shallow-parser P)
+        (.invoke "oof " prn prn)
+        (.invoke "oof fo")
+        (.invoke "oof foo bar")))
 
   )
