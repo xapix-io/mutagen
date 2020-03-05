@@ -109,6 +109,10 @@
   (let [grammar-ns (name gname)
         helpers (atom {})
         to-declare (atom #{})
+        ;; Skip docstring if present
+        bindings (if (string? (first bindings))
+                   (rest bindings)
+                   bindings)
         bindings (->> (partition 2 bindings)
                       (map (fn [[bind-name bind-parser]]
                              (let [bind-name (symbol (str grammar-ns "->" (name bind-name)))]
@@ -139,20 +143,15 @@
            `(def ~helper-name ~helper-body))
        (declare ~@(seq @to-declare))
        ~@(for [[bind-name parser] bindings]
-           `(def ~bind-name (recursive-emit ~grammar-ns ~parser)))
-       )))
+           `(def ~bind-name (recursive-emit ~grammar-ns ~parser))))))
+
+(defn- start-production-symbol [grammar start]
+  (symbol (str (name grammar) "->" (name start))))
 
 (defmacro defparser [pname grammar start]
-  (let [start-production (symbol (str (name grammar) "->" (name start)))]
+  (let [start-production (start-production-symbol grammar start)]
     `(def ~pname (m/parser ~start-production))))
 
-(comment
-
-  (defn wrap-A [xs]
-    (cons "A" xs))
-
-  (defgrammar Sample
-    :A [:char {:wrap-res wrap-A} \a]
-    :B [:cat [:resolve [:A]] [:char {:wrap-res (fn [xs] xs)} \b]])
-
-  )
+(defmacro defparser* [pname grammar start]
+  (let [start-production (start-production-symbol grammar start)]
+    `(def ~pname (m/shallow-parser ~start-production))))

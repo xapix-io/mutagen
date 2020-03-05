@@ -234,13 +234,22 @@
    (trampoline #(->Begin f state ok fail))))
 
 (defn parser [P]
-  (fn [string ok fail]
-    (trampoline P {:in string
-                   :pos 0
-                   :line 1
-                   :col 1
-                   :out []}
-                ok fail)))
+  (fn p
+    ([string] (p string
+                 (fn [{:keys [out in pos]}]
+                   (if-let [tail (not-empty (subs in pos))]
+                     (conj out tail) out))
+                 (fn [st failure]
+                   ;; TODO proper failure format needed, add pointer to original source + failure message from the parser
+                   (throw (ex-info "Failure!" {:state st
+                                               :failure failure})))))
+    ([string ok fail]
+     (trampoline P {:in string
+                    :pos 0
+                    :line 1
+                    :col 1
+                    :out []}
+                 ok fail))))
 
 (defn find-common-index [string-1 string-2]
   (let [pos (or (first (keep-indexed (fn [i [ch1 ch2]]

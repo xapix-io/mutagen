@@ -23,30 +23,65 @@
 ## TLDR;
 
 ```clojure
-;; Example of parsing arbitrary string using `mutagen.parsers.string`
-;; more examples such as structured data parsing will be added soon.
-;; Stay tuned!
+(require '[mutagen.grammar :as g])
 
-(require '[mutagen.parsers.string :as string-parser])
+(g/defgrammar KindaLispGrammar
+  ;; Single whitespace character
+  :ws1 [:some-char \space \backspace \formfeed \newline \return \tab]
 
-(def GRAMMAR
-  {"A" [:plus {:ok-wrapper (fn [xs] [(str (count xs) (first xs))])}
-        [:char \a]]
-   "B" [:plus {:ok-wrapper (fn [xs] [(str (count xs) (first xs))])}
-        [:char \b]]})
+  ;; Any whitespace character should be droped
+  :ws [:skip [:star [:ws1]]]
 
-(def ab-parser
-  (string-parser/parser GRAMMAR [:star
-                                 [:cat {:ok-wrapper (fn [[as bs]] [(str "AB: " as " " bs)])}
-                                  ["A"] ["B"]]]))
+  ;; Everything inside double quotes is a string
+  :string [:cat {:wrap-res (fn [xs]
+                             [(apply str (map :ch (rest (butlast xs))))])}
+           [:char \"]
+           [:star
+            [:cat
+             [:neg [:char \"]]
+             [:any-char]]]
+           [:char \"]
+           [:ws]]
 
-(:result (ab-parser "aaabbabaaaaaab"))
-;; => ["AB: 3a 2b" "AB: 1a 1b" "AB: 6a 1b"]
+  ;; Boolean := 'true' | 'false'
+  :boolean [:cat {:wrap-res (fn [xs]
+                              [(if (= \t (-> xs first :ch))
+                                 true
+                                 false)])}
+            [:alt
+             [:word "true"]
+             [:word "false"]]
+            [:ws]]
+
+  ;; Symbol is a sequence of more than one any character axcept whitespace, can not start with \"
+  :symbol [:cat {:wrap-res (fn [xs]
+                             [(symbol (apply str (map :ch xs)))])}
+           [:plus
+            [:cat
+             [:neg [:alt [:ws1] [:char \)]]]
+             [:any-char]]]
+           [:ws]]
+
+  ;; Everything inside round open and close parenthesis is a s-expression
+  :s-expr [:cat {:wrap-res (fn [xs] [xs])}
+           [:skip [:char \(]]
+           [:ws]
+           [:symbol]
+           [:star [:alt
+                   [:resolve [:s-expr]]
+                   [:boolean]
+                   [:string]]]
+           [:skip [:char \)]]
+           [:ws]])
+
+(g/defparser parser KindaLispGrammar :s-expr)
+
+(parser "(do-something true false \"some string\" (do-something-different \"another string\" false true))")
+;; => [[do-something true false "some string" [do-something-different "another string" false true]]]
+
 ```
 
 ## Rationale
-
-There are more than one good parser generator well known in clojure/java/javascript ecosystem. Some of them are limited by type of input (mostly String), obscure error messages makes impossible to analyse results of another parsers. `mutagen` is aiming to be simple but yet powerful tool to build parsers for complex data structures with enough options to produce a good error messages for better post analysis.
 
 ## Features
 
