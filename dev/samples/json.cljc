@@ -142,17 +142,18 @@
          [:number]
          [:array]
          [:object]]
-  :S [:cat
-      [:ws]
-      [:alt
-       [:json]
-       [:eps]]
-      [:eof]])
+  :json-document [:cat
+                  [:ws]
+                  [:alt
+                   [:json]
+                   [:eps]]
+                  [:eof]]
+  :json-documents [:cat
+                   [:ws]
+                   [:plus [:json]]
+                   [:eof]])
 
-(g/defparser json-parser JSON :S)
-
-(defn parse [json-string]
-  (json-parser json-string :out (fn [_ failure] failure)))
+(def parse (JSON :json-document))
 
 (comment
 

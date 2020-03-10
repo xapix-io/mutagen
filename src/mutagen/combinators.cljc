@@ -24,7 +24,15 @@
                            (assoc :col 0))
     (not= \newline ch) (update :col inc)))
 
-(defn char1 [ch]
+;; === Low level combinators ===
+
+(defn char1
+  "Creates a function of state, ok callback and fail callback.
+  This function should consume one character from the position
+  if the character on that position is identical to `ch`.
+  Continue execution by creating `Consumed` state if successfull
+  and directly call `fail` callback overwise."
+  [ch]
   (fn [{:keys [in pos] :as st} ok fail]
     (let [ch' (nth in pos ::eof)]
       (cond
@@ -41,7 +49,10 @@
                   :expected ch
                   :actual   ch'})))))
 
-(defn some-char [& chs]
+(defn some-char
+  "Same as `char1` but will create `Consumed` state when 'to-consume'
+  character is from the `chs` set."
+  [& chs]
   (let [chs' (set chs)]
     (fn [{:keys [in pos] :as st} ok fail]
       (let [ch' (nth in pos ::eof)]
@@ -59,7 +70,7 @@
                     :expected-one-of chs'
                     :actual          ch'}))))))
 
-(def any-char
+(defn any-char []
   (fn [{:keys [pos in] :as st} ok fail]
     (let [ch (nth in pos ::eof)]
       (cond
@@ -69,6 +80,15 @@
         :else
         (let [state (consume-char st ch)]
           (->Consumed state ok))))))
+
+(declare cat)
+
+(defn word [w]
+  (if (= 1 (count w))
+    (char1 (first w))
+    (apply cat (map char1 w))))
+
+;; === High level combinators ===
 
 (defn cat
   ([P Q]
@@ -82,12 +102,7 @@
   ([P Q & PS]
    (reduce cat (list* P Q PS))))
 
-(defn word [w]
-  (if (= 1 (count w))
-    (char1 (first w))
-    (apply cat (map char1 w))))
-
-(def eof
+(defn eof []
   (fn [{:keys [pos in] :as st} ok fail]
     (if (= pos (count in))
       (ok st)
@@ -95,7 +110,7 @@
                 :expected ::eof
                 :actual (nth in pos)}))))
 
-(def eps
+(defn eps []
   (fn [st ok _fail]
     (ok st)))
 

@@ -78,7 +78,6 @@
 
 (parser "(do-something true false \"some string\" (do-something-different \"another string\" false true))")
 ;; => [[do-something true false "some string" [do-something-different "another string" false true]]]
-
 ```
 
 ## Rationale
