@@ -74,7 +74,7 @@
            [:skip [:char \)]]
            [:ws]])
 
-(g/defparser parser KindaLispGrammar :s-expr)
+(def parser (KindaLispGrammar :s-expr))
 
 (parser "(do-something true false \"some string\" (do-something-different \"another string\" false true))")
 ;; => [[do-something true false "some string" [do-something-different "another string" false true]]]

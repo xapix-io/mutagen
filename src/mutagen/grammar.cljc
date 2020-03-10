@@ -12,7 +12,7 @@
 
 (def reserved-combinators #{:wrap :char :some-char :any-char :word :eof :eps :cat :alt :plus :star :rep :opt :neg :skip :lookahead :keep :resolve})
 
-(defmacro emit [[t & args :as C]]
+(defmacro emit [[t & args]]
   (let [opts (if (map? (first args))
                (first args)
                {})
