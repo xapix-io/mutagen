@@ -78,11 +78,14 @@
   :digit [:alt
           [:char \0]
           [:non-zero-digit]]
-  :integer [:alt
-            [:cat
-             [:non-zero-digit]
-             [:star [:digit]]]
-            [:char \0]]
+  :integer [:cat
+            [:opt
+             [:some-char \- \+]]
+            [:alt
+             [:cat
+              [:non-zero-digit]
+              [:star [:digit]]]
+             [:char \0]]]
   :number [:cat {:wrap-res wrap-number}
            [:integer]
            [:opt
@@ -90,8 +93,6 @@
            [:opt
             [:cat
              [:some-char \e \E]
-             [:opt
-              [:some-char \- \+]]
              [:integer]]]
            [:ws]]
   :string [:cat {:wrap-res wrap-string}
@@ -157,6 +158,12 @@
 
 (comment
 
-  (parse "[1,2,3]")
+  (require '[clojure.java.io :as io]
+           '[cheshire.core :as json]
+           '[criterium.core :as crit])
+
+  (let [j (slurp (io/resource "example.json"))]
+    (crit/bench (parse j))
+    #_(crit/bench (json/parse-string j)))
 
   )

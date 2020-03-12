@@ -33,12 +33,13 @@
   Continue execution by creating `Consumed` state if successfull
   and directly call `fail` callback overwise."
   [ch]
-  (fn [{:keys [in pos] :as st} ok fail]
+  (fn [{:keys [in pos line col] :as st} ok fail]
     (let [ch' (nth in pos ::eof)]
       (cond
         (= ::eof ch')
         (fail st {:type     ::unexpected-eof
-                  :expected ch})
+                  :expected ch
+                  :at [line col]})
 
         (= ch ch')
         (let [state (consume-char st ch)]
@@ -47,19 +48,21 @@
         :else
         (fail st {:type     ::unexpected-token
                   :expected ch
-                  :actual   ch'})))))
+                  :actual   ch'
+                  :at [line col]})))))
 
 (defn some-char
   "Same as `char1` but will create `Consumed` state when 'to-consume'
   character is from the `chs` set."
   [& chs]
   (let [chs' (set chs)]
-    (fn [{:keys [in pos] :as st} ok fail]
+    (fn [{:keys [in pos line col] :as st} ok fail]
       (let [ch' (nth in pos ::eof)]
         (cond
           (= ::eof ch')
           (fail st {:type            ::unexpected-eof
-                    :expected-one-of chs'})
+                    :expected-one-of chs'
+                    :at [line col]})
 
           (chs' ch')
           (let [state (consume-char st ch')]
@@ -68,14 +71,16 @@
           :else
           (fail st {:type            ::unexpected-token
                     :expected-one-of chs'
-                    :actual          ch'}))))))
+                    :actual          ch'
+                    :at [line col]}))))))
 
 (defn any-char []
-  (fn [{:keys [pos in] :as st} ok fail]
+  (fn [{:keys [pos in line col] :as st} ok fail]
     (let [ch (nth in pos ::eof)]
       (cond
         (= ::eof ch)
-        (fail st {:type ::unexpected-eof})
+        (fail st {:type ::unexpected-eof
+                  :at [line col]})
 
         :else
         (let [state (consume-char st ch)]
@@ -103,12 +108,13 @@
    (reduce cat (list* P Q PS))))
 
 (defn eof []
-  (fn [{:keys [pos in] :as st} ok fail]
+  (fn [{:keys [pos in line col] :as st} ok fail]
     (if (= pos (count in))
       (ok st)
       (fail st {:type ::unexpected-token
                 :expected ::eof
-                :actual (nth in pos)}))))
+                :actual (nth in pos)
+                :at [line col]}))))
 
 (defn eps []
   (fn [st ok _fail]
@@ -130,7 +136,8 @@
      (fn [st ok fail]
        (ALT st ok (fn [st failures]
                     (fail st {:type ::alt
-                              :failures failures})))))))
+                              :failures failures
+                              :at ((juxt :line :col) st)})))))))
 
 
 
@@ -159,7 +166,8 @@
                                  (fail st {:type ::times
                                            :expected N
                                            :actual i
-                                           :cause failure}))))))
+                                           :cause failure
+                                           :at ((juxt :line :col) st)}))))))
                 (range N))]
     (apply cat PS)))
 
@@ -173,7 +181,8 @@
   (fn [st ok fail]
     (fn []
       (P st (fn [st]
-              (fail st {:type ::neg}))
+              (fail st {:type ::neg
+                        :at ((juxt :line :col) st)}))
          (fn [_ _]
            (ok st))))))
 
