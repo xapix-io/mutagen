@@ -77,7 +77,19 @@
   (def st (slurp (io/resource "sample_data")))
 
   (cc/quick-bench (doall (mutagen-parser st :out (fn [_ failure] failure))))
+  ;; Evaluation count              : 18 in 6 samples of 3 calls.
+  ;; Execution time mean           : 43.998481 ms
+  ;; Execution time std-deviation  : 1.377663 ms
+  ;; Execution time lower quantile : 42.641391 ms ( 2.5%)
+  ;; Execution time upper quantile : 45.680054 ms (97.5%)
+  ;; Overhead used                 : 2.203383 ns
 
   (cc/quick-bench (doall (kern-parser st)))
+  ;; Evaluation count              : 12 in 6 samples of 2 calls.
+  ;; Execution time mean           : 77.153235 ms
+  ;; Execution time std-deviation  : 2.655412 ms
+  ;; Execution time lower quantile : 73.852525 ms ( 2.5%)
+  ;; Execution time upper quantile : 79.820033 ms (97.5%)
+  ;; Overhead used                 : 2.203383 ns
 
   )
