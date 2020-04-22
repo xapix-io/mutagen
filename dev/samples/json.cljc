@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [array boolean])
   (:require #?(:clj [clojure.tools.reader.edn :as edn]
                :cljs [cljs.tools.reader.edn :as edn])
-            [mutagen.combinators :as mc]))
+            [mutagen.combinators :as mc #?@(:cljs [:include-macros true])]))
 
 (defn wrap-const [token content]
   [(assoc token :content content)])
@@ -52,12 +52,6 @@
   [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
     :node :array
     :content (vec (rest (butlast xs)))}])
-
-(defn wrap-pair [xs]
-  [{:range [(-> xs first :range first)
-            (-> xs last :range last)]
-    :content xs
-    :node :pair}])
 
 (defn wrap-object [xs]
   [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
@@ -239,23 +233,4 @@
    (mc/plus json)
    (mc/eof)))
 
-(defn JSON [start-production]
-  (mc/parser
-   (get
-    {:non-zero-digit non-zero-digit,
-     :ws ws,
-     :number number,
-     :pair pair,
-     :json-documents json-documents,
-     :string string,
-     :array array,
-     :json-document json-document,
-     :integer integer,
-     :null null,
-     :json json,
-     :boolean boolean,
-     :object object,
-     :digit digit}
-    start-production)))
-
-(def parse (JSON :json-document))
+(def parse (mc/parser json-document))
