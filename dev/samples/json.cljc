@@ -12,19 +12,27 @@
                                    (last xs)])
    :node :const})
 
-(defn wrap-null [_xs]
-  [nil])
+(defn wrap-null [xs]
+  (wrap-const
+   (const-token xs)
+   nil))
 
 (defn wrap-boolean [xs]
-  [(case (-> xs first :ch)
+  (wrap-const
+   (const-token xs)
+   (case (-> xs first :ch)
      \t true
-     \f false)])
+     \f false)))
 
 (defn wrap-number [xs]
-  [(edn/read-string (apply str (map :ch xs)))])
+  (wrap-const
+   (const-token xs)
+   (edn/read-string (apply str (map :ch xs)))))
 
 (defn wrap-string [xs]
-  [(apply str (map :ch (rest (butlast xs))))])
+  (wrap-const
+   (const-token xs)
+   (apply str (map :ch (rest (butlast xs))))))
 
 (defn wrap-escape-char [xs]
   [(update (second xs) :ch {\" \"
@@ -41,10 +49,20 @@
                  (apply str (map :ch (drop 2 xs))) 16)))])
 
 (defn wrap-array [xs]
-  [(vec (rest (butlast xs)))])
+  [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
+    :node :array
+    :content (vec (rest (butlast xs)))}])
+
+(defn wrap-pair [xs]
+  [{:range [(-> xs first :range first)
+            (-> xs last :range last)]
+    :content xs
+    :node :pair}])
 
 (defn wrap-object [xs]
-  [(apply hash-map (rest (butlast xs)))])
+  [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
+    :node :object
+    :content (vec (rest (butlast xs)))}])
 
 (declare json)
 

@@ -88,15 +88,12 @@
               [{:range [[6 5] [6 5]], :node :const, :content 1}
                {:range [[6 7] [6 7]], :node :const, :content 2}
                {:range [[6 9] [6 9]], :node :const, :content 3}]}
-             {:range [[7 0] [7 1]], :node :object, :content ()}
+             {:range [[7 0] [7 1]], :node :object, :content []}
              {:range [[7 4] [7 13]],
               :node :object,
               :content
-              [{:range [[7 5] [7 12]],
-                :content
-                [{:range [[7 5] [7 9]], :node :const, :content "foo"}
-                 {:range [[7 12] [7 12]], :node :const, :content 1}],
-                :node :pair}]}]}]
+              [{:range [[7 5] [7 9]], :node :const, :content "foo"}
+               {:range [[7 12] [7 12]], :node :const, :content 1}]}]}]
            (json/parse "[
   null, true,
 false,
@@ -114,51 +111,28 @@ false,
     (is (= [{:range [[1 1] [7 0]],
             :node :object,
             :content
-            [{:range [[1 2] [1 19]],
+            [{:range [[1 2] [1 9]], :node :const, :content "string"}
+             {:range [[1 12] [1 19]], :node :const, :content "string"}
+             {:range [[1 22] [1 27]], :node :const, :content "null"}
+             {:range [[1 29] [1 32]], :node :const, :content nil}
+             {:range [[2 1] [2 9]], :node :const, :content "boolean"}
+             {:range [[3 0] [3 3]], :node :const, :content true}
+             {:range [[4 0] [4 9]], :node :const, :content "boolean2"}
+             {:range [[4 20] [4 24]], :node :const, :content false}
+             {:range [[5 0] [5 17]], :node :const, :content "array of numbers"}
+             {:range [[5 19] [5 35]],
+              :node :array,
               :content
-              [{:range [[1 2] [1 9]], :node :const, :content "string"}
-               {:range [[1 12] [1 19]], :node :const, :content "string"}],
-              :node :pair}
-             {:range [[1 22] [1 32]],
+              [{:range [[5 20] [5 20]], :node :const, :content 0}
+               {:range [[5 23] [5 23]], :node :const, :content 1}
+               {:range [[5 26] [5 27]], :node :const, :content 42}
+               {:range [[5 30] [5 34]], :node :const, :content 42.32}]}
+             {:range [[6 0] [6 23]], :node :const, :content " nested objects ﷽"}
+             {:range [[6 26] [6 41]],
+              :node :object,
               :content
-              [{:range [[1 22] [1 27]], :node :const, :content "null"}
-               {:range [[1 29] [1 32]], :node :const, :content nil}],
-              :node :pair}
-             {:range [[2 1] [3 3]],
-              :content
-              [{:range [[2 1] [2 9]], :node :const, :content "boolean"}
-               {:range [[3 0] [3 3]], :node :const, :content true}],
-              :node :pair}
-             {:range [[4 0] [4 24]],
-              :content
-              [{:range [[4 0] [4 9]], :node :const, :content "boolean2"}
-               {:range [[4 20] [4 24]], :node :const, :content false}],
-              :node :pair}
-             {:range [[5 0] [5 35]],
-              :content
-              [{:range [[5 0] [5 17]], :node :const, :content "array of numbers"}
-               {:range [[5 19] [5 35]],
-                :node :array,
-                :content
-                [{:range [[5 20] [5 20]], :node :const, :content 0}
-                 {:range [[5 23] [5 23]], :node :const, :content 1}
-                 {:range [[5 26] [5 27]], :node :const, :content 42}
-                 {:range [[5 30] [5 34]], :node :const, :content 42.32}]}],
-              :node :pair}
-             {:range [[6 0] [6 41]],
-              :content
-              [{:range [[6 0] [6 23]],
-                :node :const,
-                :content " nested objects ﷽"}
-               {:range [[6 26] [6 41]],
-                :node :object,
-                :content
-                [{:range [[6 27] [6 40]],
-                  :content
-                  [{:range [[6 27] [6 34]], :node :const, :content "nested"}
-                   {:range [[6 37] [6 40]], :node :const, :content true}],
-                  :node :pair}]}],
-              :node :pair}]}]
+              [{:range [[6 27] [6 34]], :node :const, :content "nested"}
+               {:range [[6 37] [6 40]], :node :const, :content true}]}]}]
            (json/parse "{\"string\": \"string\", \"null\":null
 ,\"boolean\":
 true,
