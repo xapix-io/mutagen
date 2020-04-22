@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [array boolean])
   (:require #?(:clj [clojure.tools.reader.edn :as edn]
                :cljs [cljs.tools.reader.edn :as edn])
-            [mutagen.grammar :as g #?@(:cljs [:include-macros true])]))
+            [mutagen.combinators :as mc]))
 
 (defn wrap-const [token content]
   [(assoc token :content content)])
@@ -12,27 +12,19 @@
                                    (last xs)])
    :node :const})
 
-(defn wrap-null [xs]
-  (wrap-const
-   (const-token xs)
-   nil))
+(defn wrap-null [_xs]
+  [nil])
 
 (defn wrap-boolean [xs]
-  (wrap-const
-   (const-token xs)
-   (case (-> xs first :ch)
+  [(case (-> xs first :ch)
      \t true
-     \f false)))
+     \f false)])
 
 (defn wrap-number [xs]
-  (wrap-const
-   (const-token xs)
-   (edn/read-string (apply str (map :ch xs)))))
+  [(edn/read-string (apply str (map :ch xs)))])
 
 (defn wrap-string [xs]
-  (wrap-const
-   (const-token xs)
-   (apply str (map :ch (rest (butlast xs))))))
+  [(apply str (map :ch (rest (butlast xs))))])
 
 (defn wrap-escape-char [xs]
   [(update (second xs) :ch {\" \"
@@ -49,121 +41,203 @@
                  (apply str (map :ch (drop 2 xs))) 16)))])
 
 (defn wrap-array [xs]
-  [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
-    :node :array
-    :content (vec (rest (butlast xs)))}])
-
-(defn wrap-pair [xs]
-  [{:range [(-> xs first :range first)
-            (-> xs last :range last)]
-    :content xs
-    :node :pair}])
+  [(vec (rest (butlast xs)))])
 
 (defn wrap-object [xs]
-  [{:range (mapv (juxt :line :col) [(first xs) (last xs)])
-    :node :object
-    :content (vec (rest (butlast xs)))}])
+  [(apply hash-map (rest (butlast xs)))])
 
-(g/defgrammar JSON
-  :ws [:skip [:star [:some-char \space \backspace \formfeed \newline \return \tab]]]
-  :null [:cat {:wrap-res wrap-null}
-         [:word "null"]
-         [:ws]]
-  :boolean [:cat {:wrap-res wrap-boolean}
-            [:alt
-             [:word "true"]
-             [:word "false"]]
-            [:ws]]
-  :non-zero-digit [:some-char [:range \1 \9]]
-  :digit [:alt
-          [:char \0]
-          [:non-zero-digit]]
-  :integer [:cat
-            [:opt
-             [:some-char \- \+]]
-            [:alt
-             [:cat
-              [:non-zero-digit]
-              [:star [:digit]]]
-             [:char \0]]]
-  :number [:cat {:wrap-res wrap-number}
-           [:integer]
-           [:opt
-            [:cat [:char \.] [:plus [:digit]]]]
-           [:opt
-            [:cat
-             [:some-char \e \E]
-             [:integer]]]
-           [:ws]]
-  :string [:cat {:wrap-res wrap-string}
-           [:char \"]
-           [:star
-            [:alt
-             [:cat {:wrap-res wrap-escape-char}
-              [:char \\ ]
-              [:some-char \" \\ \b \f \n \r \t]]
-             [:cat {:wrap-res wrap-unicode-char}
-              [:char \\ ]
-              [:char \u]
-              [:rep 4 [:some-char [:range \0 \9] [:range \a \f] [:range \A \F]]]]
-             [:cat
-              [:neg [:char \"]]
-              [:any-char]]]]
-           [:char \"]
-           [:ws]]
-  :array [:cat {:wrap-res wrap-array}
-          [:char \[]
-          [:ws]
-          [:alt
-           [:cat
-            [:resolve [:json]]
-            [:star [:cat [:skip [:char \,]] [:ws] [:resolve [:json]]]]
-            [:char \]]]
-           [:char \]]]
-          [:ws]]
-  :pair [:cat {:wrap-res wrap-pair}
-         [:string]
-         [:skip [:char \:]]
-         [:ws]
-         [:resolve [:json]]]
-  :object [:cat {:wrap-res wrap-object}
-           [:char \{]
-           [:ws]
-           [:alt
-            [:cat
-             [:pair]
-             [:star [:cat [:skip [:char \,]] [:ws] [:pair]]]
-             [:char \}]]
-            [:char \}]]
-           [:ws]]
-  :json [:alt
-         [:null]
-         [:boolean]
-         [:string]
-         [:number]
-         [:array]
-         [:object]]
-  :json-document [:cat
-                  [:ws]
-                  [:alt
-                   [:json]
-                   [:eps]]
-                  [:eof]]
-  :json-documents [:cat
-                   [:ws]
-                   [:plus [:json]]
-                   [:eof]])
+(declare json)
+
+(def ws
+  (mc/skip
+   (mc/star
+    (mc/some-char
+     \space
+     \backspace
+     \formfeed
+     \newline
+     \return
+     \tab))))
+
+(def null
+  (mc/wrap
+   (mc/cat
+    (mc/word "null")
+    ws)
+   {:wrap-res wrap-null}))
+
+(def boolean
+  (mc/wrap
+   (mc/cat
+    (mc/alt
+     (mc/word "true")
+     (mc/word "false"))
+    ws)
+   {:wrap-res wrap-boolean}))
+
+(def non-zero-digit
+  (mc/some-char \1 \2 \3 \4 \5 \6 \7 \8 \9))
+
+(def digit
+  (mc/alt
+   (mc/char1 \0)
+   non-zero-digit))
+
+(def integer
+  (mc/cat
+   (mc/opt (mc/some-char \- \+))
+   (mc/alt
+    (mc/cat
+     non-zero-digit
+     (mc/star digit))
+    (mc/char1 \0))))
+
+(def number
+  (mc/wrap
+   (mc/cat
+    integer
+    (mc/opt
+     (mc/cat
+      (mc/char1 \.)
+      (mc/plus digit)))
+    (mc/opt
+     (mc/cat
+      (mc/some-char \e \E)
+      integer))
+    ws)
+   {:wrap-res wrap-number}))
+
+(def string
+  (mc/wrap
+   (mc/cat
+    (mc/char1 \")
+    (mc/star
+     (mc/alt
+      (mc/wrap
+       (mc/cat
+        (mc/char1 \\)
+        (mc/some-char \" \\ \b \f \n \r \t))
+       {:wrap-res wrap-escape-char})
+      (mc/wrap
+       (mc/cat
+        (mc/char1 \\)
+        (mc/char1 \u)
+        (mc/rep
+         4
+         (mc/some-char
+          \0
+          \1
+          \2
+          \3
+          \4
+          \5
+          \6
+          \7
+          \8
+          \9
+          \a
+          \b
+          \c
+          \d
+          \e
+          \f
+          \A
+          \B
+          \C
+          \D
+          \E
+          \F)))
+       {:wrap-res wrap-unicode-char})
+      (mc/cat
+       (mc/neg (mc/char1 \"))
+       (mc/any-char))))
+    (mc/char1 \")
+    ws)
+   {:wrap-res wrap-string}))
+
+(def array
+  (mc/wrap
+   (mc/cat
+    (mc/char1 \[)
+    ws
+    (mc/alt
+     (mc/cat
+      (mc/resolve-combinator json)
+      (mc/star
+       (mc/cat
+        (mc/skip
+         (mc/char1 \,))
+        ws
+        (mc/resolve-combinator json)))
+      (mc/char1 \]))
+     (mc/char1 \]))
+    ws)
+   {:wrap-res wrap-array}))
+
+(def pair
+  (mc/cat
+   string
+   (mc/skip (mc/char1 \:))
+   ws
+   (mc/resolve-combinator json)))
+
+(def object
+  (mc/wrap
+   (mc/cat
+    (mc/char1 \{)
+    ws
+    (mc/alt
+     (mc/cat
+      pair
+      (mc/star
+       (mc/cat
+        (mc/skip
+         (mc/char1 \,))
+        ws
+        pair))
+      (mc/char1 \}))
+     (mc/char1 \}))
+    ws)
+   {:wrap-res wrap-object}))
+
+(def json
+  (mc/alt
+   null
+   boolean
+   string
+   number
+   array
+   object))
+
+(def json-document
+  (mc/cat
+   ws
+   (mc/alt json (mc/eps))
+   (mc/eof)))
+
+(def json-documents
+  (mc/cat
+   ws
+   (mc/plus json)
+   (mc/eof)))
+
+(defn JSON [start-production]
+  (mc/parser
+   (get
+    {:non-zero-digit non-zero-digit,
+     :ws ws,
+     :number number,
+     :pair pair,
+     :json-documents json-documents,
+     :string string,
+     :array array,
+     :json-document json-document,
+     :integer integer,
+     :null null,
+     :json json,
+     :boolean boolean,
+     :object object,
+     :digit digit}
+    start-production)))
 
 (def parse (JSON :json-document))
-
-(comment
-
-  (require '[clojure.java.io :as io]
-           '[cheshire.core :as json]
-           '[criterium.core :as crit])
-
-  (let [j (slurp (io/resource "example.json"))]
-    (crit/bench (parse j))
-    #_(crit/bench (json/parse-string j)))
-
-  )

@@ -1,5 +1,5 @@
 (ns mutagen.combinators
-  (:refer-clojure :exclude [cat resolve keep trampoline]))
+  (:refer-clojure :exclude [cat keep trampoline]))
 
 (defrecord Consumed [state ok])
 (defrecord Begin [parser state ok fail])
@@ -9,7 +9,7 @@
        (range #?(:clj (int start) :cljs (.charCodeAt start 0))
               (inc #?(:clj (int end) :cljs (.charCodeAt end 0))))))
 
-(defmacro resolve [p]
+(defmacro resolve-combinator [p]
   (let [st (gensym)
         ok (gensym)
         fail (gensym)]
