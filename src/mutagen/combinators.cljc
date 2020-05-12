@@ -1,8 +1,22 @@
 (ns mutagen.combinators
-  (:refer-clojure :exclude [cat keep trampoline]))
+  (:refer-clojure :exclude [cat keep trampoline])
+  #?(:cljs (:require [clojure.string :as string]
+                     [goog.string :as gstring])))
 
 (defrecord Consumed [state ok])
 (defrecord Begin [parser state ok fail])
+
+(defn- ->set
+  ([chs] (->set #{} chs))
+  ([init-set chs]
+   (reduce
+    (fn [s ch]
+      (if (or (sequential? ch)
+              (string? ch))
+        (->set s ch)
+        (conj s ch)))
+    init-set
+    chs)))
 
 (defn char-range [start end]
   (map char
@@ -26,6 +40,30 @@
 
 ;; === Low level combinators ===
 
+(defn examine-char [f & {:keys [expected]}]
+  (fn [{:keys [in pos line col] :as st} ok fail]
+    (let [ch' (nth in pos ::eof)]
+      (cond
+        (= ::eof ch')
+        (fail st (merge
+                  {:type     ::unexpected-eof
+                   :at [line col]}
+                  (when expected
+                    {:expected expected})))
+
+        (f ch')
+        (let [state (consume-char st ch')]
+          (->Consumed state ok))
+
+        :else
+        (fail st (merge
+                  {:type     ::unexpected-token
+                   :expected expected
+                   :actual   ch'
+                   :at [line col]}
+                  (when expected
+                    {:expected expected})))))))
+
 (defn char1
   "Creates a function of state, ok callback and fail callback.
   This function should consume one character from the position
@@ -33,29 +71,13 @@
   Continue execution by creating `Consumed` state if successfull
   and directly call `fail` callback overwise."
   [ch]
-  (fn [{:keys [in pos line col] :as st} ok fail]
-    (let [ch' (nth in pos ::eof)]
-      (cond
-        (= ::eof ch')
-        (fail st {:type     ::unexpected-eof
-                  :expected ch
-                  :at [line col]})
-
-        (= ch ch')
-        (let [state (consume-char st ch)]
-          (->Consumed state ok))
-
-        :else
-        (fail st {:type     ::unexpected-token
-                  :expected ch
-                  :actual   ch'
-                  :at [line col]})))))
+  (examine-char #(= % ch) :expected ch))
 
 (defn some-char
   "Same as `char1` but will create `Consumed` state when 'to-consume'
   character is from the `chs` set."
   [& chs]
-  (let [chs' (set chs)]
+  (let [chs' (->set chs)]
     (fn [{:keys [in pos line col] :as st} ok fail]
       (let [ch' (nth in pos ::eof)]
         (cond
@@ -74,6 +96,19 @@
                     :actual          ch'
                     :at [line col]}))))))
 
+(def alpha-char
+  (examine-char #?(:clj #(Character/isLetter %)
+                   :cljs #(not= (string/lower-case %)
+                                (string/upper-case %)))
+                :expected :alpha-character))
+
+(def alpha-numeric
+  (examine-char #?(:clj #(Character/isLetterOrDigit %)
+                   :cljs #(or (not= (string/lower-case %)
+                                    (string/upper-case %))
+                              (gstring/isNumeric %)))
+                :expected :alpha-numeric-character))
+
 (defn any-char []
   (fn [{:keys [pos in line col] :as st} ok fail]
     (let [ch (nth in pos ::eof)]
@@ -86,7 +121,11 @@
         (let [state (consume-char st ch)]
           (->Consumed state ok))))))
 
-(declare cat)
+(declare cat neg)
+
+(defn any-char-except [& chs]
+  (cat (neg (apply some-char chs))
+       (any-char)))
 
 (defn word [w]
   (if (= 1 (count w))
@@ -96,6 +135,7 @@
 ;; === High level combinators ===
 
 (defn cat
+  ([P] P)
   ([P Q]
    (fn [st ok fail]
      (fn []
@@ -121,6 +161,7 @@
     (ok st)))
 
 (defn alt
+  ([P] P)
   ([P Q]
    (fn [st ok fail]
      (fn []
@@ -195,20 +236,26 @@
          (fn [st failure]
            (fail (dissoc st :sealed) failure))))))
 
-(defn wrap [P {:keys [wrap-res wrap-fail]}]
-  (fn [{:keys [out sealed] :as st} ok fail]
-    (if sealed
-      (P st ok fail)
-      (P (assoc st :out [])
-         (if wrap-res
-           (fn [st']
-             (ok (update st' :out #(into out (wrap-res %)))))
-           ok)
-         (if wrap-fail
-           (fn [st' failure]
-             (fail st' (wrap-fail failure {:prev-ok st
-                                           :st st'})))
-           fail)))))
+(defn wrap
+  ([P] (wrap P nil nil))
+  ([P wrap-res]
+   (if (map? wrap-res)
+     (wrap P (:wrap-res wrap-res) (:wrap-fail wrap-res))
+     (wrap P wrap-res nil)))
+  ([P wrap-res wrap-fail]
+   (fn [{:keys [out sealed] :as st} ok fail]
+     (if sealed
+       (P st ok fail)
+       (P (assoc st :out [])
+          (if wrap-res
+            (fn [st']
+              (ok (update st' :out #(into out (wrap-res %)))))
+            ok)
+          (if wrap-fail
+            (fn [st' failure]
+              (fail st' (wrap-fail failure {:prev-ok st
+                                            :st st'})))
+            fail))))))
 
 (defn lookahead [P]
   (fn [st ok fail]
@@ -223,6 +270,18 @@
       (P st (fn [st']
               (ok (assoc st :out (:out st'))))
          fail))))
+
+(def ws-char
+  (some-char
+   \space
+   \backspace
+   \formfeed
+   \newline
+   \return
+   \tab))
+
+(def skip-ws
+  (skip (star ws-char)))
 
 (def ^:dynamic *keep-consumed?* false)
 (def ^:dynamic *intermediate-states*)
