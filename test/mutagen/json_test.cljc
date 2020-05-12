@@ -1,5 +1,5 @@
 (ns mutagen.json-test
-  (:require [samples.json :as json]
+  (:require [mutagen.grammars.json :as json]
             #?(:clj [clojure.test :refer [deftest testing is]]
                :cljs [cljs.test :refer [deftest testing is] :include-macros true])))
 

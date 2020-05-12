@@ -6,18 +6,6 @@
 (defrecord Consumed [state ok])
 (defrecord Begin [parser state ok fail])
 
-(defn- ->set
-  ([chs] (->set #{} chs))
-  ([init-set chs]
-   (reduce
-    (fn [s ch]
-      (if (or (sequential? ch)
-              (string? ch))
-        (->set s ch)
-        (conj s ch)))
-    init-set
-    chs)))
-
 (defn char-range [start end]
   (map char
        (range #?(:clj (int start) :cljs (.charCodeAt start 0))
@@ -77,7 +65,7 @@
   "Same as `char1` but will create `Consumed` state when 'to-consume'
   character is from the `chs` set."
   [& chs]
-  (let [chs' (->set chs)]
+  (let [chs' (set (flatten chs))]
     (fn [{:keys [in pos line col] :as st} ok fail]
       (let [ch' (nth in pos ::eof)]
         (cond
