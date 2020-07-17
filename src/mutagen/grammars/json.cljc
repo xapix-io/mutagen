@@ -2,8 +2,7 @@
   (:require #?(:clj [clojure.tools.reader.edn :as edn]
                :cljs [cljs.tools.reader.edn :as edn])
             [mutagen.core :as m]
-            [mutagen.string :as sm]
-            :reload-all))
+            [mutagen.string :as sm]))
 
 (def json-grammar
   {:json           [::m/alt :null :boolean :string :number :array :object :ws]
