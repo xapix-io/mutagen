@@ -2,9 +2,7 @@
 {:tests          [{:id           :cljs
                    :type         :kaocha.type/cljs
                    :test-paths   ["test"]
-                   :source-paths ["src"]
-                   ;; :cljs/repl-env cljs.repl.browser/repl-env
-                   }
+                   :source-paths ["src"]}
                   {:id   :clj
                    :type :kaocha.type/clojure.test}]
  :cloverage/opts {:codecov? true}}
