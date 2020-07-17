@@ -53,13 +53,14 @@
 
 (defn- -alpha-char []
   (fn [in out ok fail]
-    (let [ch (peek-char in)]
+    (if-let [ch (peek-char in)]
       (if #?(:clj (Character/isLetter ch)
              :cljs (not= (string/lower-case ch)
                          (string/upper-case ch)))
         (let [[ch in] (read-char in)]
           (ok in (conj out ch)))
-        (fail in out)))))
+        (fail in out))
+      (fail in out))))
 
 (defmethod m/vec->parser ::alpha-char [_ _ props & _]
   (let [form (into [::alpha-char props])
@@ -70,14 +71,15 @@
 
 (defn- -alpha-num-char []
   (fn [in out ok fail]
-    (let [ch (peek-char in)]
+    (if-let [ch (peek-char in)]
       (if #?(:clj (Character/isLetterOrDigit ch)
              :cljs (or (not= (string/lower-case ch)
                              (string/upper-case ch))
                        (gstring/isNumeric ch)))
         (let [[ch in] (read-char in)]
           (ok in (conj out ch)))
-        (fail in out)))))
+        (fail in out))
+      (fail in out))))
 
 (defmethod m/vec->parser ::alpha-num-char [_ _ props & _]
   (let [form (into [::alpha-num-char props])
