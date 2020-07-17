@@ -133,5 +133,15 @@
       (-form [_] form)
       (-parser [_] pf))))
 
+(defmethod m/vec->parser ::eof [& _]
+  (let [form [::eof]
+        pf (fn [{:keys [st pos] :as in} out ok fail]
+             (if (>= pos (count st))
+               (ok in out)
+               (fail in out)))]
+    (reify m/Parser
+      (-form [_] form)
+      (-parser [_] pf))))
+
 (defn input [st]
   (->StringInput st 0))
