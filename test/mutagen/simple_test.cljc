@@ -1,22 +1,21 @@
 (ns mutagen.simple-test
   (:require [mutagen.core :as m]
-            [mutagen.string :as sm]
             #?(:clj [clojure.test :refer [deftest is]]
                :cljs [cljs.test :refer [deftest is] :include-macros true])))
 
 (def simple-parser
-  (m/-start-production
+  (m/-parser
    (m/grammar {:A [::m/plus {:wrap #(str (count %) "A")}
-                   [::sm/char \a]]
+                   [::m/char \a]]
                :B [::m/plus {:wrap #(str (count %) "B")}
-                   [::sm/char \b]]
+                   [::m/char \b]]
                :S [::m/star [::m/cat :A :B]]})
    :S))
 
 (deftest basic
   (is (= []
-         (simple-parser (sm/input ""))))
+         (simple-parser "")))
   (is (= ["2A" "1B"]
-         (simple-parser (sm/input "aab"))))
+         (simple-parser "aab")))
   (is (= ["3A" "2B" "1A" "1B"]
-         (simple-parser (sm/input "aaabbab")))))
+         (simple-parser "aaabbab"))))
