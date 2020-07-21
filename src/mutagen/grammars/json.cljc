@@ -4,12 +4,13 @@
             [mutagen.core :as m]))
 
 (def json-grammar
-  {:json           [::m/alt :null :boolean :string :number :array :object :ws]
+  {:document       [::m/cat [::m/plus :json] ::m/eof]
+   :json           [::m/alt :null :boolean :string :number :array :object]
    :null           [::m/cat {:wrap (constantly nil)}
                     [::m/word "null"]
                     :ws]
    :boolean        [::m/cat {:wrap #(case (first %)
-                                      \t  true
+                                      \t true
                                       \f false)}
                     [::m/alt
                      [::m/word "false"]
@@ -54,18 +55,32 @@
    :fraction       [::m/cat [::m/char \.] [::m/star :digit]]
    :sign           [::m/char \- \+]
    :exponent       [::m/cat [::m/char \e \E] [::m/opt :sign] :integer]
-   :array          [::m/cat {:wrap (fn [x] (or x []))}
+   :array          [::m/alt
+                    :e-array
+                    :ne-array]
+   :e-array        [::m/cat {:wrap #(constantly [])}
                     [::m/char {:hide true} \[]
                     :ws
-                    [::m/opt
-                     [::m/cat :json [::m/star [::m/cat [::m/char {:hide true} \,] :ws :json]]]]
                     [::m/char {:hide true} \]]
                     :ws]
-   :object         [::m/cat {:wrap #(apply hash-map %)}
+   :ne-array       [::m/cat {:wrap vec}
+                    [::m/char {:hide true} \[]
+                    :ws
+                    [::m/cat :json [::m/star [::m/cat [::m/char {:hide true} \,] :ws :json]]]
+                    [::m/char {:hide true} \]]
+                    :ws]
+   :object         [::m/alt
+                    :e-object
+                    :ne-object]
+   :e-object       [::m/cat {:wrap #(constantly {})}
                     [::m/char {:hide true} \{]
                     :ws
-                    [::m/opt
-                     [::m/cat :pair [::m/star [::m/cat [::m/char {:hide true} \,] :ws :pair]]]]
+                    [::m/char {:hide true} \}]
+                    :ws]
+   :ne-object      [::m/cat {:wrap #(do (prn %) (apply hash-map %))}
+                    [::m/char {:hide true} \{]
+                    :ws
+                    [::m/cat :pair [::m/star [::m/cat [::m/char {:hide true} \,] :ws :pair]]]
                     [::m/char {:hide true} \}]
                     :ws]
    :pair           [::m/cat :string :ws [::m/char {:hide true} \:] :ws :json]
@@ -74,7 +89,7 @@
 (def json-parser
   (m/-parser
    (m/grammar json-grammar)
-   :json))
+   :document))
 
 (defn parse [st]
   (json-parser st []))

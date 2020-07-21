@@ -4,7 +4,8 @@
             [blancas.kern.core :as k]
             [clojure.java.io :as io]
             [criterium.core :as cc]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clj-async-profiler.core :as prof]))
 
 ;; ========== Mutagen ===============
 
@@ -100,5 +101,9 @@
   (def json-st (slurp (io/resource "example.json")))
 
   (cc/quick-bench (first (json/parse json-st)))    ;; ~> 5ms + 13Kb json file
+
+  (prof/profile (mutagen-parser st))
+
+  (prof/serve-files 8080)
 
   )
