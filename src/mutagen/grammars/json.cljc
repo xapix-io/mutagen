@@ -4,7 +4,7 @@
             [mutagen.core :as m]))
 
 (def json-grammar
-  {:document       [::m/cat [::m/plus :json] ::m/eof]
+  {:document       [::m/cat [::m/star :json] ::m/eof]
    :json           [::m/alt :null :boolean :string :number :array :object]
    :null           [::m/cat {:wrap (constantly nil)}
                     [::m/word "null"]
@@ -58,7 +58,7 @@
    :array          [::m/alt
                     :e-array
                     :ne-array]
-   :e-array        [::m/cat {:wrap #(constantly [])}
+   :e-array        [::m/cat {:wrap (constantly [])}
                     [::m/char {:hide true} \[]
                     :ws
                     [::m/char {:hide true} \]]
@@ -72,7 +72,7 @@
    :object         [::m/alt
                     :e-object
                     :ne-object]
-   :e-object       [::m/cat {:wrap #(constantly {})}
+   :e-object       [::m/cat {:wrap (constantly {})}
                     [::m/char {:hide true} \{]
                     :ws
                     [::m/char {:hide true} \}]

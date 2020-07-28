@@ -10,14 +10,14 @@
 ;; ========== Mutagen ===============
 
 (def mutagen-grammar
-  {:root [::m/cat :instruction [::m/star [::m/cat [::m/char {:hide true} \,] :instruction]] [::m/char {:hide true} \newline] ::m/eof]
+  {:root        [::m/cat :instruction [::m/star [::m/cat [::m/char {:hide true} \,] :instruction]] [::m/char {:hide true} \newline] ::m/eof]
    :instruction [::m/alt :partner :exchange :spin]
-   :partner [::m/cat {:wrap #(cons :PARTNER %)} [::m/char {:hide true} \p] :program [::m/char {:hide true} \/] :program]
-   :exchange [::m/cat {:wrap #(cons :EXCHANGE %)} [::m/char {:hide true} \x] :position [::m/char {:hide true} \/] :position]
-   :spin [::m/cat {:wrap #(cons :SPIN %)} [::m/char {:hide true} \s] :position]
-   :position [::m/cat {:wrap #(apply str %)} :digit [::m/opt :digit]]
-   :program [::m/char \a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p]
-   :digit [::m/char \0 \1 \2 \3 \4 \5 \6 \7 \8 \9]})
+   :partner     [::m/cat {:wrap #(cons :PARTNER %)} [::m/char {:hide true} \p] :program [::m/char {:hide true} \/] :program]
+   :exchange    [::m/cat {:wrap #(cons :EXCHANGE %)} [::m/char {:hide true} \x] :position [::m/char {:hide true} \/] :position]
+   :spin        [::m/cat {:wrap #(cons :SPIN %)} [::m/char {:hide true} \s] :position]
+   :position    [::m/cat {:wrap #(apply str %)} :digit [::m/opt :digit]]
+   :program     [::m/char \a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p]
+   :digit       [::m/char \0 \1 \2 \3 \4 \5 \6 \7 \8 \9]})
 
 (def mutagen-parser
   (m/-parser
@@ -95,7 +95,7 @@
   (def st (slurp (io/resource "sample_data")))
 
   (cc/quick-bench (doall (handwritten-parser st))) ;; ~> 8ms
-  (cc/quick-bench (doall (mutagen-parser st)))     ;; ~> 26ms
+  (cc/quick-bench (doall (mutagen-parser st)))     ;; ~> 36ms
   (cc/quick-bench (doall (kern-parser st)))        ;; ~> 111ms
 
   (def json-st (slurp (io/resource "example.json")))
